@@ -1,0 +1,114 @@
+---
+title: "Disaster-Relief-Project-Part-1"
+author: "Mahin Ganesan, Wyatt Priddy, and Taylor Tucker"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+---
+<!--- Change font size for headers --->
+<style>
+h1.title { font-size: 28px; }
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 14px; }
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+knitr::opts_chunk$set(cache=TRUE, autodep=TRUE)
+knitr::opts_chunk$set(fig.align="center", fig.pos="tbh")
+```
+
+
+```{r warning=FALSE, message=FALSE, start-parallel}
+#| cache: FALSE
+
+# Set up Parallel Processing
+library(doParallel)
+
+cl <- makePSOCKcluster(parallel::detectCores(logical = FALSE))
+
+registerDoParallel(cl)
+```
+
+
+# Introduction {-}
+
+INTRO TEXT...
+
+
+
+# Data {-}
+
+TEXT
+
+```{r warning=FALSE, message=FALSE, load-data-and-EDA}
+
+# Load Libraries
+library(tidyverse)
+library(corrplot)
+library(tidymodels)
+
+# Read in Data
+haiti <- read_csv('https://gedeck.github.io/DS-6030/project/HaitiPixels.csv', show_col_types=FALSE) %>%
+            mutate(BlueTarp= factor(ifelse(Class=="Blue Tarp", "Yes", "No"),labels=c("No", "Yes")))
+
+```
+
+```{r missing-values}
+# Look for Missing Values
+haiti %>%
+  summarise_all(~sum(is.na(.))) %>% knitr::kable(caption="Missing Values in Haiti Data Set")
+```
+
+```{r correlation of variables}
+# View Correlation of Variables
+haiti %>% 
+  select_if(is.numeric) %>%
+  cor() %>%
+  knitr::kable(digits=3, caption='Correlation Matrix of Predictor Variables')
+```
+
+
+
+# Description of Methodology {-}
+
+TEXT
+
+# Results {-}
+
+```{r train-test-split}
+# Set seed
+set.seed(81718)
+
+# Create initial split for 80/20 with stratified sampling on Hazardous
+haiti_split <- initial_split(haiti, prop=.8, strat=BlueTarp)
+
+# Create training data set
+train_data <- training(haiti_split)
+
+# Create test data set
+test_data <- testing(haiti_split)
+
+# Set up 10-fold cross-validation
+resamples <- vfold_cv(train_data, v=10, strata=BlueTarp)
+
+# Set settings for control resamples
+cv_control <- control_resamples(save_pred=TRUE)
+```
+
+
+# Conclusion {-}  
+
+TEXT
+
+
+
+
+
+
+
+# Appendix {-}
+ ```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+ ```
