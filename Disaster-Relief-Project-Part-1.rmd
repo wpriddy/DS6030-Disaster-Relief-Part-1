@@ -47,8 +47,9 @@ TEXT
 
 # Load Libraries
 library(tidyverse)
-library(corrplot)
 library(tidymodels)
+library(probably)
+
 
 # Read in Data
 haiti <- read_csv('https://gedeck.github.io/DS-6030/project/HaitiPixels.csv', show_col_types=FALSE) %>%
@@ -74,11 +75,15 @@ haiti %>%
 
 # Description of Methodology {-}
 
-TEXT
+Libraries used:
+  tidymodels
+  tidyverse
+  probably
 
 # Results {-}
 
 ```{r train-test-split}
+
 # Set seed
 set.seed(81718)
 
@@ -96,6 +101,102 @@ resamples <- vfold_cv(train_data, v=10, strata=BlueTarp)
 
 # Set settings for control resamples
 cv_control <- control_resamples(save_pred=TRUE)
+```
+
+
+```{r log-model}
+
+# Create Formula
+formula <- BlueTarp ~ Red + Green + Blue
+
+# Create Recipe
+rec <- recipe(formula, data=train_data) %>%
+    step_normalize(all_numeric_predictors())
+
+
+# Create Log Model
+logreg_model <- logistic_reg() %>% 
+    set_engine("glm") %>%
+    set_mode("classification")
+
+# define and execute the cross-validation workflow
+logreg_wf <- workflow() %>%
+    add_model(logreg_model) %>%
+    add_recipe(rec) 
+
+# Cross Validate Model
+logreg_fit_cv <- logreg_wf %>%
+                     fit_resamples(resamples=resamples, control=cv_control)
+    
+
+# Define performance metrics
+performance_metrics <- metric_set(j_index, specificity, sensitivity, accuracy)
+
+
+# Create Function to Visual Train Metrics
+visualize_training <- function(fit_resample_results, title){
+  
+    aggregate_metrics <-  bind_rows(logreg_fit_cv$.metrics) %>%
+          group_by(.metric) %>%
+          summarize(Mean = mean(.estimate),
+                    std_err = sd(.estimate) / sqrt(n()))%>%
+          rename(Metric=.metric)
+    
+    aggregate_metrics %>%
+      ggplot(aes(x=Mean, y=Metric, xmin=Mean-std_err, xmax=Mean+std_err)) +
+      geom_point() +
+      geom_linerange() +
+      ggtitle("Log Reg Cross Validation Results") +
+      theme(plot.title = element_text(hjust = 0.5))
+}
+
+# Visualize logReg Fit
+visualize_training(logreg_fit_cv)
+
+# Test Thresholds
+performance_func_1 <- function(model, data){
+                    threshold_perf(model %>% augment(train_data), 
+                                   BlueTarp, 
+                                   .pred_Yes,
+                                   thresholds = seq(0.05, 0.95, 0.01), event_level="second",
+                                   metrics=performance_metrics)
+}
+
+# Fit Model
+logreg_model <- logreg_wf %>% fit(train_data)
+
+# Get Performance Thresholds
+threshold_performance <- performance_func_1(logreg_wf%>%fit(train_data)) 
+
+# Visualize Performance Thresholds
+threshold_performance%>%
+      ggplot(aes(x = .threshold, y = .estimate, color=.metric))+
+      geom_line()
+
+
+# Pick best J-Index as Threshold
+max_j <- function(performance_data){
+          performance_data %>%
+              filter(.metric == 'j_index') %>%
+              filter(.estimate == max(.estimate))
+}
+
+# Run Model on Test Data
+logreg_results <- logreg_model %>% augment(test_data)
+
+# Change Pred Class metric based on threshold testing
+
+logreg_results$.threshold_pred_class <- as.factor(ifelse(logreg_results$.pred_Yes >= max_j(threshold_performance)$.threshold, "Yes", "No"))
+
+
+
+# View results before threshold
+performance_metrics(logreg_results, truth=BlueTarp, estimate=.pred_class)
+
+# View Results After implementing threshold
+performance_metrics(logreg_results, truth=BlueTarp, estimate=.threshold_pred_class)
+
+
 ```
 
 
