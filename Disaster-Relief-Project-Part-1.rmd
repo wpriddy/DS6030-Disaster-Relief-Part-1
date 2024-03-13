@@ -79,7 +79,7 @@ haiti <- read_csv('https://gedeck.github.io/DS-6030/project/HaitiPixels.csv', sh
             mutate(BlueTarp= factor(ifelse(Class=="Blue Tarp", "Yes", "No"),labels=c("No", "Yes")))
 ```
 
-As expected when trying to find a needle in a haystack, our representation of misplaced persons (blue tarps) makes up only a small portion of the data set. Just 3.2% of the total data set, or 2022 records, are classified as `blue tarp`. After inspecting the average color of the, it becomes apparent that even though blue tarps are a small section of the data their distinction in color should set them apart. 
+As expected when trying to find a needle in a haystack, our representation of misplaced persons (blue tarps) makes up only a small portion of the data set. Just 3.2% of the total data set, or 2022 records, are classified as `blue tarp`. After inspecting the average color of the classes, it becomes apparent that even though blue tarps are a small section of the data their distinction in color should set them apart. 
 
 ```{r fig.cap="Average Color of Class", fig.height=1, fig.width=6, rgb_example}
 
@@ -109,19 +109,19 @@ haiti %>%
     geom_bar(stat = "identity") +
     scale_fill_manual(values=c('#A9BACD', '#C3B7A2' , '#F7E3B0','#B8A88C', '#4E4E3C')) +
     geom_text(aes(label = percent_of_total), vjust = -0.5, size = 3) +
-    labs(x = "Classification", y = "Instances") +
+    labs(x = "", y = "Instances") +
     theme_minimal()+
     guides(fill = "none")
 ```
 
 
 
-```{r train-test-split}
+```{r train-test-split, warning=FALSE, message=FALSE}
 
 # Set seed
 set.seed(81718)
 
-# Create initial split for 80/20 with stratified sampling on Hazardous
+# Create initial split for 80/20 with stratified sampling on BlueTarp
 haiti_split <- initial_split(haiti, prop=.8, strat=BlueTarp)
 
 # Create training data set
@@ -140,20 +140,37 @@ cv_control <- control_resamples(save_pred=TRUE)
 
 # Description of Methodology {-}
 
-Given that our sample data set only has 3.2% of the target class, we will use stratification to account for the imbalance in our test and train split. We are looking to ensure that each there is even representation between our two sets to ensure a robust analysis when training our models and subsequently predicting on the test data. 
+Given that our sample data set only has 3.2% of the target class, we will use stratification to account for the imbalance in our test and train split. We are looking to ensure that there is even representation between our two sets to ensure a robust analysis when training our models and subsequently predicting on the test data. We are using an 80/20 split on the training versus testing data. Since the data set is relatively large and we are using stratification to ensure an even population of blue tarps across the split, leaving 20% of the data for hold-out is appropriate. 
 
 Each model is being trained with 10-fold cross-validation to ensure the models are generalizing well and stable over the data set rather than performing well on a single subsection of the train/test split.  
 
 
 Libraries used:
-  - tidymodels
-  - tidyverse
-  - probably
 
-```{r functions}
+  -  tidymodels: used for model creation, cross-validation, and determining model performance
+  -  tidyverse: used for plotting, data manipulation, and chaining operations
+  -  probably: used for assessing threshold performance on the models
+  -  doParallel: used for setting up parallel processing of the code to speed up performance. 
+
+
+Metrics utilized:
+
+  - specificity: $\frac{TN}{FP+TN}$
+  
+  - sensitivity: $\frac{TP}{TP+FN}$
+  
+  - accuracy: $\frac{TP+TN}{TP+TN+FP+FN}$
+  
+  - precision: $\frac{TP}{TP+FP}$
+  
+
+  
+
+
+```{r functions, warning=FALSE, message=FALSE}
 
 # Define performance metrics
-performance_metrics <- metric_set(j_index, specificity, sensitivity, accuracy, f_meas, precision, recall, bal_accuracy)
+performance_metrics <- metric_set(specificity, sensitivity, accuracy, precision)
 
 
 get_ROC_plot <- function(model, train_data, test_data, model_name){
@@ -172,7 +189,8 @@ get_ROC_plot <- function(model, train_data, test_data, model_name){
     # Plot ROC curves for train and test data with different colors
   autoplot(roc_data) +
     geom_line(aes(x = 1 - specificity, y = sensitivity, color = Dataset))+
-    labs(title = model_name, x = "False Positive Rate", y = "True Positive Rate")
+    labs(title = model_name, x = "False Positive Rate", y = "True Positive Rate")+
+    theme(plot.title = element_text(hjust = 0.5))
 }
 
 # Create Function to Visual Train Metrics
@@ -188,7 +206,7 @@ visualize_training <- function(fit_resample_results, title){
       ggplot(aes(x=Mean, y=Metric, xmin=Mean-std_err, xmax=Mean+std_err)) +
       geom_point() +
       geom_linerange() +
-      ggtitle("Log Reg Cross Validation Results") +
+      ggtitle(title) +
       theme(plot.title = element_text(hjust = 0.5))
 }
 
@@ -198,11 +216,11 @@ performance_func_1 <- function(model, data){
                     threshold_perf(model %>% augment(train_data), 
                                    BlueTarp, 
                                    .pred_Yes,
-                                   thresholds = seq(0.01, 0.9, 0.01), event_level="second",
+                                   thresholds = seq(0.01, 0.85, 0.01), event_level="second",
                                    metrics=performance_metrics)
 }
 
-# Pick best recall as Threshold
+# Pick best precision as Threshold
 max_precision <- function(performance_data){
           performance_data %>%
               filter(.metric == 'precision') %>%
@@ -213,13 +231,12 @@ max_precision <- function(performance_data){
 
 # Results {-}
 
-<overall results here>
-
 ### Logistic Regression Model
 
-The logistic model was fit 
+The logistic model was fit across the 10-fold cross-validation. The model seems to be generalizing well across the different folds with minimal variation across the training performance metrics. The average performance metrics tell us that the initial model has very high sensitivity with little variation across the folds. Specificity is much lower with more variation in the results indicating is it not as stable. This can be interpreted as the model is performing well at classifying the blue tarps. However it is classifying many objects that are not blue tarps creating many false positives as seen in the lower specificity. 
 
-```{r log-model, message=FALSE, warning=FALSE}
+
+```{r log-model-training, message=FALSE, warning=FALSE, fig.cap="Logistic Regression CV Results", fig.width=5, fig.height=3}
 
 # Create Formula
 formula <- BlueTarp ~ Red + Green + Blue
@@ -242,35 +259,48 @@ logreg_wf <- workflow() %>%
 logreg_fit_cv <- logreg_wf %>%
                      fit_resamples(resamples=resamples, control=cv_control, metrics=performance_metrics)
 
+# Visualize logreg Fit
+visualize_training(logreg_fit_cv, "Logreg Cross Validation Results")
+```
 
-# Visualize logReg Fit
-visualize_training(logreg_fit_cv)
+
+After performing threshold analysis, a threshold of 0.84 was selected to minimize the false positives while keeping a substantial portion of the true positives in the analysis. Utilizing this threshold resulted in a precision rating of 0.996 meaning that 99.6% of the positive predictions in the model are true positives. The AUC score of 0.999 means that the model has near perfect classification abilities and is highly reliable in determining whether a data point is a blue tarp or not. Similar to the results from the training data, specificity is lower at 87.7% on the tesing data. The performance on the testing data in relation to the cross-validation of the training set indicates that the model is not overfitting on the training data
+
+```{r log-model-threshold-analysis, warning=FALSE, message=FALSE}
 
 # Fit Model
 logreg_model <- logreg_wf %>% fit(train_data)
 
 # Get Performance Thresholds
-threshold_performance <- performance_func_1(logreg_wf%>%fit(train_data)) 
-
-# Visualize Performance Thresholds
-threshold_performance%>%
-      ggplot(aes(x = .threshold, y = .estimate, color=.metric))+
-      geom_line()
+threshold_performance <- performance_func_1(logreg_model) 
 
 # Run Model on Test Data
 logreg_results <- logreg_model %>% augment(test_data)
 
 # Change Pred Class metric based on threshold testing
-logreg_results$.threshold_pred_class <- as.factor(ifelse(logreg_results$.pred_Yes >= min(max_precision(threshold_performance)$.threshold), "Yes", "No"))
+logreg_results$.threshold_pred_class <- as.factor(ifelse(logreg_results$.pred_Yes >= max_precision(threshold_performance)$.threshold, "Yes", "No"))
 
-# View results before threshold
-performance_metrics(logreg_results, truth=BlueTarp, estimate=.pred_class)
+# View results before and after threshold picking
+performance_table <-  performance_metrics(logreg_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
+                                  bind_rows(roc_auc(logreg_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(threshold_performance)$.threshold) %>%
+                                  select(c(Threshold, .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold)
 
-# View Results After implementing threshold
-performance_metrics(logreg_results, truth=BlueTarp, estimate=.threshold_pred_class)
-
+performance_table %>%
+      knitr::kable(digits=4, caption='Test Performance Metrics')
 ```
 
+At the threshold of 0.84, 342 of the 390 blue tarps in the testing set are correctly identified by the model. Of the 12,259 not blue tarps, only 4 are false positives. Of all the blue tarps identified by the model, there is a 98.8% rate of aid workers time and resources not being wasted on futile searches. While 48 blue tarps were unidentified by the model (12.3%), once the aid workers can provide resources to the 342 correctly identified refuges we can then expand the search. This will help us maximize a timely and precise search of refugees accounting for early and easy wins before expanding the search areas to get the last pockets of refugees. 
+
+```{r confusion-matrix, message=FALSE, warning=FALSE}
+logreg_conf_matrix <- conf_mat(logreg_results, estimate=.threshold_pred_class, truth=BlueTarp)
+```
+
+###### TODO PUT THIS IN GRAPH WITH OTHER MODELS ONCE THEY ARE DEVELOPED USING PATCHWORK
+```{r log-ROC, warning=FALSE, message=FALSE}
+get_ROC_plot(logreg_model, train_data, test_data, "Log Reg Model")
+```
 
 # Conclusion {-}  
 
