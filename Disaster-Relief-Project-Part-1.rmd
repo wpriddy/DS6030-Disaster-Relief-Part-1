@@ -73,6 +73,8 @@ Team members have assisted our mission by classifying training data consisting o
 library(tidyverse)
 library(tidymodels)
 library(probably)
+library(discrim)
+library(patchwork)
 
 # Read in Data
 haiti <- read_csv('https://gedeck.github.io/DS-6030/project/HaitiPixels.csv', show_col_types=FALSE) %>%
@@ -99,7 +101,6 @@ haiti %>%
 Vegetation and soil cover over 73% of the pictures as to be expected of pictures that largely will include countryside. 
 
 ```{r fig.cap="Distribution of Classifications in Training Set", fig.height=3, fig.width=6, eda-classifications}
-
 # Show different classifications in data set
 haiti %>% 
   group_by(Class) %>% 
@@ -150,6 +151,8 @@ Libraries used:
   -  tidymodels: used for model creation, cross-validation, and determining model performance
   -  tidyverse: used for plotting, data manipulation, and chaining operations
   -  probably: used for assessing threshold performance on the models
+  -  discrim: used for the LDA/QDA models
+  -  patchwork: used for combining plots
   -  doParallel: used for setting up parallel processing of the code to speed up performance. 
 
 
@@ -196,7 +199,7 @@ get_ROC_plot <- function(model, train_data, test_data, model_name){
 # Create Function to Visual Train Metrics
 visualize_training <- function(fit_resample_results, title){
   
-    aggregate_metrics <-  bind_rows(logreg_fit_cv$.metrics) %>%
+    aggregate_metrics <-  bind_rows(fit_resample_results$.metrics) %>%
           group_by(.metric) %>%
           summarize(Mean = mean(.estimate),
                     std_err = sd(.estimate) / sqrt(n()))%>%
@@ -210,6 +213,15 @@ visualize_training <- function(fit_resample_results, title){
       theme(plot.title = element_text(hjust = 0.5))
 }
 
+# Create Function to visualize distributions
+distribution_graph <- function(model, data, model_name) {
+                            model %>%
+                                 augment(data) %>%
+                                    ggplot(aes(x=.pred_Yes, color=BlueTarp)) +
+                                    geom_density(bw=0.07) +
+                                    labs(x='p(BlueTarp)', title=model_name) +
+                                    theme(plot.title = element_text(hjust = 0.5))
+}
 
 # Test Thresholds
 performance_func_1 <- function(model, data){
@@ -233,7 +245,7 @@ max_precision <- function(performance_data){
 
 ### Logistic Regression Model
 
-The logistic model was fit across the 10-fold cross-validation. The model seems to be generalizing well across the different folds with minimal variation across the training performance metrics. The average performance metrics tell us that the initial model has very high sensitivity with little variation across the folds. Specificity is much lower with more variation in the results indicating is it not as stable. This can be interpreted as the model is performing well at classifying the blue tarps. However it is classifying many objects that are not blue tarps creating many false positives as seen in the lower specificity. 
+The logistic model was fit across the 10-fold cross-validation. The model seems to be generalizing well across the different folds with minimal variation across the training performance metrics as seen in *Figure 3*. The average performance metrics tell us that the initial model has very high sensitivity with little variation across the folds. Specificity is much lower with more variation in the results indicating is it not as stable. This can be interpreted as the model is performing well at classifying the blue tarps. However it is classifying many objects that are not blue tarps creating many false positives as seen in the lower specificity. 
 
 
 ```{r log-model-training, message=FALSE, warning=FALSE, fig.cap="Logistic Regression CV Results", fig.width=5, fig.height=3}
@@ -260,48 +272,176 @@ logreg_fit_cv <- logreg_wf %>%
                      fit_resamples(resamples=resamples, control=cv_control, metrics=performance_metrics)
 
 # Visualize logreg Fit
-visualize_training(logreg_fit_cv, "Logreg Cross Validation Results")
+logreg_cv_viz <- visualize_training(logreg_fit_cv, "Logreg Cross Validation Results")
 ```
 
 
-After performing threshold analysis, a threshold of 0.84 was selected to minimize the false positives while keeping a substantial portion of the true positives in the analysis. Utilizing this threshold resulted in a precision rating of 0.996 meaning that 99.6% of the positive predictions in the model are true positives. The AUC score of 0.999 means that the model has near perfect classification abilities and is highly reliable in determining whether a data point is a blue tarp or not. Similar to the results from the training data, specificity is lower at 87.7% on the tesing data. The performance on the testing data in relation to the cross-validation of the training set indicates that the model is not overfitting on the training data
+After performing threshold analysis, a threshold of 0.84 was selected to minimize the false positives while keeping a substantial portion of the true positives in the analysis. Seen in *Table 1*, Utilizing this threshold resulted in a precision rating of 0.996 meaning that 99.6% of the positive predictions in the model are true positives. The AUC score of 0.999 means that the model has near perfect classification abilities and is highly reliable in determining whether a data point is a blue tarp or not. Similar to the results from the training data, specificity is lower at 87.7% on the tesing data. The performance on the testing data in relation to the cross-validation of the training set indicates that the model is not overfitting on the training data
 
 ```{r log-model-threshold-analysis, warning=FALSE, message=FALSE}
 
 # Fit Model
-logreg_model <- logreg_wf %>% fit(train_data)
+logreg_model_fit <- logreg_wf %>% fit(train_data)
 
 # Get Performance Thresholds
-threshold_performance <- performance_func_1(logreg_model) 
+logreg_threshold_performance <- performance_func_1(logreg_model_fit) 
 
 # Run Model on Test Data
-logreg_results <- logreg_model %>% augment(test_data)
+logreg_results <- logreg_model_fit %>% augment(test_data)
 
 # Change Pred Class metric based on threshold testing
-logreg_results$.threshold_pred_class <- as.factor(ifelse(logreg_results$.pred_Yes >= max_precision(threshold_performance)$.threshold, "Yes", "No"))
+logreg_results$.threshold_pred_class <- as.factor(ifelse(logreg_results$.pred_Yes >= max_precision(logreg_threshold_performance)$.threshold, "Yes", "No"))
 
 # View results before and after threshold picking
 performance_table <-  performance_metrics(logreg_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
                                   bind_rows(roc_auc(logreg_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
-                                  mutate(Threshold = max_precision(threshold_performance)$.threshold) %>%
-                                  select(c(Threshold, .metric, .estimate)) %>%
-                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold)
+                                  mutate(Threshold = max_precision(logreg_threshold_performance)$.threshold) %>%
+                                    dplyr::select(c(Threshold, .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="logreg")
+
+```
+
+At the threshold of 0.84, 342 of the 390 blue tarps in the testing set are correctly identified by the model. Of the 12,259 not blue tarps, only 4 are false positives. Of all the blue tarps identified by the model, there is a 98.8% rate of aid workers time and resources not being wasted on futile searches. While 48 blue tarps were unidentified by the model (12.3% of total tarps), once the aid workers can provide resources to the 342 correctly identified refuges we can then expand the search. This will help us maximize a timely and precise search of refugees accounting for early and easy wins before expanding the search areas to get the last pockets of refugees. 
+
+
+### LDA Model
+
+The LDA Model has similar variations in the cross-validation performance as the logistic regression model seen in *Figure 3*. Specificity seems to be the only metric not performing at above 97%. The specificity across the 10-fold cross-validation of the training set is around 80% with slightly less variation within one standard error than the logistic regression. 
+
+The threshold selected was also 0.84 to keep the number of false positives at a minimum. At this threshold, the LDA model performs worse across all performance metrics and than logistic regression model, seen in *Table 1*. This seems to indicate that a linear decision boundary may not be the best fit for the data set being utilized. 
+
+At the selected threshold of 0.84, only 299 of the 390 blue tarps in the testing set are correctly identified by the model. Of the 12,259 not blue tarps, 88 were false positives. This would represent an increase of 2100% more false positives and could equate to numerous man hours and resources being wasted if we were to go with this model. 91 blue tarps were false negatives also resulting in more pockets of refuges being missed by this model. 
+
+### LDA Model
+
+The QDA model performs better than the LDA model for the 10-fold cross-validation but worse than the logistic regression. The main difference between all the models thus far has been the variation in specificity as sensitivity, precision, and accuracy have been comparable across the models. The QDA model also has smaller variation within one standard error for specificity than the logistic regression but has a higher average specificity than the LDA model. 
+
+At the selected threshold of 0.85 on the testing data, the QDA model only has 2 false positives. However, the number of true positives predicted is 312 which results in 30 less pockets of refuges being rescued and the number of false negatives is 78 which is an increase of 62.5% more blue tarps being unidentified compared to the logistic regression model. 
+
+
+### Metrics and Graphics
+
+```{r LDA-QDA}
+
+# Create LDA Model
+lda_model <- discrim_linear(mode="classification") %>%
+               set_engine("MASS")
+
+# Create Workflow
+lda_wf <- workflow()%>%
+            add_model(lda_model)%>%
+            add_recipe(rec)
+
+# Create Validation Metric Set
+lda_wf_fit_cv <- lda_wf %>%
+                     fit_resamples(resamples=resamples, control=cv_control, metrics=performance_metrics)
+
+# Visualize CV Results Fit
+lda_cv_viz <- visualize_training(lda_wf_fit_cv, "LDA Validation Results")
+
+# Fit LDA Model
+lda_model_fit <- lda_wf %>% fit(train_data)
+
+# Run Model on Test Data
+lda_results <- lda_model_fit %>% augment(test_data)
+
+# Get Performance Thresholds
+lda_threshold_performance <- performance_func_1(lda_model_fit) 
+
+# Change Pred Class metric based on threshold testing
+lda_results$.threshold_pred_class <- as.factor(ifelse(lda_results$.pred_Yes >= max_precision(lda_threshold_performance)$.threshold, "Yes", "No"))
+
+# View results before and after threshold picking
+performance_table <-  bind_rows(performance_table, 
+                                performance_metrics(lda_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
+                                  bind_rows(roc_auc(lda_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(lda_threshold_performance)$.threshold) %>%
+                                  dplyr::select(c(Threshold, .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="LDA")
+                                )
+
+# Create QDA Model
+qda_model <- discrim_quad(mode="classification") %>%
+               set_engine("MASS")
+
+# Create Workflow
+qda_wf <- workflow()%>%
+            add_model(qda_model)%>%
+            add_recipe(rec)
+
+# Create Validation Metric Set
+qda_wf_fit_cv <- qda_wf %>%
+                     fit_resamples(resamples=resamples, control=cv_control, metrics=performance_metrics)
+
+# Visualize QDA Fit
+qda_cv_viz <- visualize_training(qda_wf_fit_cv, "QDA Validation Results")
+
+# Fit QDA Model
+qda_model_fit <- qda_wf %>% fit(train_data)
+
+# Run Model on Test Data
+qda_results <- qda_model_fit %>% augment(test_data)
+
+# Get Performance Thresholds
+qda_threshold_performance <- performance_func_1(qda_model_fit) 
+
+# Change Pred Class metric based on threshold testing
+qda_results$.threshold_pred_class <- as.factor(ifelse(qda_results$.pred_Yes >= max_precision(qda_threshold_performance)$.threshold, "Yes", "No"))
+
+
+# View results before and after threshold picking
+performance_table <-  bind_rows(performance_table, 
+                                performance_metrics(qda_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
+                                  bind_rows(roc_auc(qda_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(qda_threshold_performance)$.threshold) %>%
+                                  dplyr::select(c(Threshold, .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="QDA")
+                                )
 
 performance_table %>%
       knitr::kable(digits=4, caption='Test Performance Metrics')
 ```
 
-At the threshold of 0.84, 342 of the 390 blue tarps in the testing set are correctly identified by the model. Of the 12,259 not blue tarps, only 4 are false positives. Of all the blue tarps identified by the model, there is a 98.8% rate of aid workers time and resources not being wasted on futile searches. While 48 blue tarps were unidentified by the model (12.3%), once the aid workers can provide resources to the 342 correctly identified refuges we can then expand the search. This will help us maximize a timely and precise search of refugees accounting for early and easy wins before expanding the search areas to get the last pockets of refugees. 
+```{r cv-training, fig.cap="Cross Validation Metrics"}
+# Visualize Cross validation Metrics
+lda_cv_viz + qda_cv_viz + logreg_cv_viz + plot_layout(ncol=2)
+```
+
+
+```{r log-ROC, warning=FALSE, message=FALSE, fig.cap="ROC Curves"}
+log_roc <- get_ROC_plot(logreg_model_fit, train_data, test_data, "Log Reg Model")
+lda_roc <- get_ROC_plot(lda_model_fit, train_data, test_data, "LDA Model")
+qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model")
+
+# Visualize ROC plots
+lda_roc + qda_roc + log_roc + plot_layout(ncol=2)
+```
+
+
+```{r distribution-graphics, fig.cap="Threshold Performance"}
+
+log_reg_distribution <- distribution_graph(logreg_model_fit, train_data, "Logistic Regression")
+lda_distribution <- distribution_graph(lda_model_fit, train_data, "LDA")
+qda_distribution <- distribution_graph(qda_model_fit, train_data, "QDA")
+
+# Visualize Distributions
+lda_distribution + qda_distribution + log_reg_distribution + plot_layout(ncol=2)
+
+
+```
 
 ```{r confusion-matrix, message=FALSE, warning=FALSE}
+
+# Create Confusion Matrixes to reference TP, FP,TN, FP in discussion of results
 logreg_conf_matrix <- conf_mat(logreg_results, estimate=.threshold_pred_class, truth=BlueTarp)
-```
+lda_conf_matrix <- conf_mat(lda_results, estimate=.threshold_pred_class, truth=BlueTarp)
+qda_conf_matrix <- conf_mat(qda_results, estimate=.threshold_pred_class, truth=BlueTarp)
 
-###### TODO PUT THIS IN GRAPH WITH OTHER MODELS ONCE THEY ARE DEVELOPED USING PATCHWORK
-```{r log-ROC, warning=FALSE, message=FALSE}
-get_ROC_plot(logreg_model, train_data, test_data, "Log Reg Model")
-```
 
+```
 # Conclusion {-}  
 
 TEXT
