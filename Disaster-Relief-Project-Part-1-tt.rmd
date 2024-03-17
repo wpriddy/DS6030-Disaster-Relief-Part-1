@@ -587,10 +587,11 @@ log_reg_distribution <- distribution_graph(logreg_model_fit, train_data, "Logist
 lda_distribution <- distribution_graph(lda_model_fit, train_data, "LDA")
 qda_distribution <- distribution_graph(qda_model_fit, train_data, "QDA")
 knn_distribution <- distribution_graph(knn_model_fit, train_data, "KNN Model")
-# Visualize Distributio
-lda_distribution + qda_distribution + log_reg_distribution + knn_distribution +
-  plot_layout(ncol=2)
+elastic_distribution <- distribution_graph(elasticnet_model_tuned, train_data, "Penalized Log Reg Model")
 
+# Visualize Distributions
+lda_distribution + qda_distribution + log_reg_distribution + knn_distribution + elastic_distribution +
+  plot_layout(ncol=2)
 
 ```
 
