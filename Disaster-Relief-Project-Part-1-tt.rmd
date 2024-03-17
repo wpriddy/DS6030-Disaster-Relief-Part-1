@@ -504,15 +504,15 @@ elasticnet_wf <- workflow() %>%
 # Testing a range of parameter values
 parameters <- extract_parameter_set_dials(elasticnet_wf) %>% 
     update(
-        penalty=penalty(c(-1, 1)),
-        mixture=mixture(c(-1, 1))
+        penalty=penalty(c(-20, -10)),
+        mixture=mixture(c(0, 10))
     )
 
 
 # Identify best model based on searching the parameter space
 tune_results <- tune_grid(elasticnet_wf, 
                           resamples=resamples,
-                          grid=grid_random(parameters, size=20), 
+                          grid=grid_random(parameters, size=200), 
                           metrics=performance_metrics)
 
 show_best(tune_results, metric='accuracy', n=1) %>% 
@@ -526,7 +526,7 @@ elasticnet_model_tuned <- elasticnet_wf %>%
   fit(train_data)
 
 # Get preds with test data
-elastic_results <- elastic_model_fit %>% augment(test_data)
+elastic_results <- elasticnet_model_tuned %>% augment(test_data)
 
 
 
