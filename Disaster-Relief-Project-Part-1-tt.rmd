@@ -460,7 +460,7 @@ knn_cv_viz <- visualize_training(knn_wf_fit_cv, "KNN Validation Results")
 
 
 # Fit KNN Model
-knn_model_fit <- knn_tuned_model %>% fit(train_data)
+knn_model_final_fit <- knn_tuned_model %>% fit(train_data)
 
 
 # Run Model on Test Data
@@ -515,7 +515,7 @@ tune_results <- tune_grid(elasticnet_wf,
                           grid=grid_random(parameters, size=20), 
                           metrics=performance_metrics)
 
-show_best(tune_results, metric='specificity', n=1) %>% 
+show_best(tune_results, metric='accuracy', n=1) %>% 
     knitr::kable()
 
 autoplot(tune_results)
@@ -526,7 +526,7 @@ elastic_cv_viz <- visualize_training(tune_results,
                                  Regression Validation Results")
 
 # Run Model on Test Data
-elastic_model_fit <- elasticnet_wf %>% fit(train_data)
+# elastic_model_fit <- elasticnet_wf %>% fit(train_data)
 
 #elastic_results <- elastic_model_fit %>% augment(test_data)
 
@@ -539,7 +539,7 @@ elasticnet_model_final_fit <- elasticnet_wf %>%
 
 
 tune_results %>% 
-    show_best(metric='specificity') %>% 
+    show_best(metric='accuracy') %>% 
     select(-.config) %>% 
     knitr::kable()
 
@@ -567,11 +567,10 @@ elastic_cv_viz
 log_roc <- get_ROC_plot(logreg_model_fit, train_data, test_data, "Log Reg Model")
 lda_roc <- get_ROC_plot(lda_model_fit, train_data, test_data, "LDA Model")
 qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model")
-knn_roc <- get_ROC_plot(knn_model_fit, train_data, test_data, "KNN Model")
-#elastic_roc <- get_ROC_plot(elastic_model_fit, train_data, test_data, 
-                            #"Penalized Log Reg Model")
+knn_roc <- get_ROC_plot(knn_model_final_fit, train_data, test_data, "KNN Model")
+elastic_roc <- get_ROC_plot(elasticnet_model_final_fit, train_data, test_data, "Penalized Log Reg Model")
 # Visualize ROC plots
-lda_roc + qda_roc + log_roc + knn_roc + plot_layout(ncol=2)
+lda_roc + qda_roc + log_roc + knn_roc + elastic_roc +  plot_layout(ncol=2)
 ```
 
 
