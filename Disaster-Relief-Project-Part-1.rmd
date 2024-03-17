@@ -453,7 +453,6 @@ knn_cv_viz <- visualize_training(knn_wf_fit_cv, "KNN Validation Results")
 # Fit KNN Model
 knn_model_final_fit <- knn_tuned_model %>% fit(train_data)
 
-
 # Run Model on Test Data
 knn_results <- knn_model_final_fit %>% augment(test_data)
 
@@ -541,6 +540,12 @@ elastic_cv_viz <- visualize_training(tune_results,
 # Fit EN Model
 # elasticnet_model_final_fit <- elasticnet_model_tuned %>% fit(train_data)
 
+# Get threshold performance
+en_threshold_performance <- performance_func_1(elasticnet_model_tuned) 
+
+# Change Pred Class metric based on threshold testing
+elastic_results$.threshold_pred_class <- as.factor(ifelse(elastic_results$.pred_Yes >= max_precision(en_threshold_performance)$.threshold, "Yes", "No"))
+
 # tune_results %>% 
 #     show_best(metric='accuracy') %>% 
 #     select(-.config) %>% 
@@ -555,9 +560,9 @@ elastic_cv_viz <- visualize_training(tune_results,
 
 # View results before and after threshold picking
 performance_table <-  bind_rows(performance_table, 
-                                performance_metrics(elastic_results, truth=BlueTarp, estimate=.pred_class) %>%
+                                performance_metrics(elastic_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
                                   bind_rows(roc_auc(elastic_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
-                                  mutate(Threshold = max_precision(knn_threshold_performance)$.threshold) %>%
+                                  mutate(Threshold = max_precision(en_threshold_performance)$.threshold) %>%
                                   dplyr::select(c(Threshold, 
                                                   .metric, .estimate)) %>%
                                       pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
@@ -612,12 +617,14 @@ knn_conf_matrix <- conf_mat(knn_results, estimate=.threshold_pred_class, truth=B
 en_conf_matrix <- conf_mat(elastic_results, estimate=.pred_class, truth=BlueTarp)
 
 
-# en_conf_matrix
+en_conf_matrix
+qda_conf_matrix
 ```
 # Conclusion {-}  
 
+Based on our analyses, we found that the Penalized Logistic Regression Model to perform the best out of the five models explored. Based on our performance metrics of specificity, sensitivity, accuracy, precision, and AUC, this model consistently scored either higher than, or similarly to, the other models. In particular, the PLR Model had the highest specificity, accuracy, and AUC out of all the models we tried, with values of 0.9051, 0.9962, and 0.9989, respectively. This model incorrectly classified 11 non-tarps as tarps, and incorrectly classified 37 tarps as non-tarps. We found this to be the best combination of false-positives and true-negatives in order to efficiently allocate resources in a rescue situation.
 
-
+That being said, most of the models performed very well. There were no models which significantly outperformed, or underperformed, based on our performance metrics and qualitative analysis. We have high confidence in our results
 
 
 

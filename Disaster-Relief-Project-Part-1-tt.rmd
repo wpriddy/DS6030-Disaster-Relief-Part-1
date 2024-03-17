@@ -505,8 +505,9 @@ elasticnet_wf <- workflow() %>%
 parameters <- extract_parameter_set_dials(elasticnet_wf) %>% 
     update(
         penalty=penalty(c(-20, -10)),
-        mixture=mixture(c(0, 10))
+        mixture=mixture(c(-10, 10))
     )
+
 
 
 # Identify best model based on searching the parameter space
