@@ -617,17 +617,16 @@ knn_conf_matrix <- conf_mat(knn_results, estimate=.threshold_pred_class, truth=B
 en_conf_matrix <- conf_mat(elastic_results, estimate=.pred_class, truth=BlueTarp)
 
 
-en_conf_matrix
-qda_conf_matrix
+# knn_conf_matrix
+# qda_conf_matrix
 ```
 # Conclusion {-}  
 
-Based on our analyses, we found that the Penalized Logistic Regression Model to perform the best out of the five models explored. Based on our performance metrics of specificity, sensitivity, accuracy, precision, and AUC, this model consistently scored either higher than, or similarly to, the other models. In particular, the PLR Model had the highest specificity, accuracy, and AUC out of all the models we tried, with values of 0.9051, 0.9962, and 0.9989, respectively. This model incorrectly classified 11 non-tarps as tarps, and incorrectly classified 37 tarps as non-tarps. We found this to be the best combination of false-positives and true-negatives in order to efficiently allocate resources in a rescue situation.
+Based on our analyses, we found that the K-Nearest Neighbors Model performs the best out of the five models explored. Based on our performance metrics of specificity, sensitivity, accuracy, precision, and AUC, this model consistently scored either higher than, or similarly to, the other models. In particular, the KNN Model had the highest specificity, accuracy, and precision out of all the models we tried, with values of 0.8923, 0.9963, and 0.9966, respectively. This model incorrectly classified 5 non-tarps as tarps, and incorrectly classified 42 tarps as non-tarps. We found this to be the best combination of false-positives and true-negatives in order to efficiently allocate resources in a rescue situation. In particular, the 5 non-tarps which were classified as tarps was relatively low, which would allow rescue teams to avoid performing operations at non-tarp locations. 
 
-That being said, most of the models performed very well. There were no models which significantly outperformed, or underperformed, based on our performance metrics and qualitative analysis. We have high confidence in our results
+That being said, most of the models performed very well, as can be seen by the test performance metrics. There were no models which significantly outperformed, or underperformed, based on our performance metrics and qualitative analysis. We have high confidence in our results especially considering the amount of exploration of models which we undertook. Each model was 10-fold cross-validated, and any tunable parameter was tuned as well. Thus, we have high confidence that our results are an accurate depiction of model performance, and since all models performed relatively well, we have high confidence in our results.  
 
-
-
+Based on this confidence, we believe that our work would be effective in terms of helping saving human lives. In particular, our high threshold reduces the false-positive rate - the rate at which non-tarps are classified as tarps. By reducing this quantity, we can reduce the number of misinformed rescuers who may be sent to areas where there are no people to be rescued. This is great, but comes with the tradeoff in that the true-negative rate is higher. However, this can be remedied in later rescue attempts by lowering the threshold. This allows for an initial efficient use of rescue resources. Therefore, we believe that these well-performing models would be effective in saving human lives by efficiently pointing rescue resources towards those who need it.
 
 
 # Appendix {-}
