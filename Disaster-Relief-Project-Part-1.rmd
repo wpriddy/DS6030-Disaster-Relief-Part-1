@@ -552,6 +552,20 @@ test_predictions <- elasticnet_model_tuned %>%
 
 test_metrics <- test_predictions %>%
   performance_metrics(truth = BlueTarp, estimate = .pred_class)
+
+# View results before and after threshold picking
+performance_table <-  bind_rows(performance_table, 
+                                performance_metrics(elastic_results, truth=BlueTarp, estimate=.pred_class) %>%
+                                  bind_rows(roc_auc(elastic_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(knn_threshold_performance)$.threshold) %>%
+                                  dplyr::select(c(Threshold, 
+                                                  .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="Penalized LR")
+                                )
+
+performance_table %>%
+      knitr::kable(digits=4, caption='Test Performance Metrics')
 ```
 
 ```{r cv-training, fig.cap="Cross Validation Metrics"}
