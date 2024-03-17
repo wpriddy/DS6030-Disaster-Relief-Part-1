@@ -401,8 +401,8 @@ performance_table <-  bind_rows(performance_table,
                                       mutate(model="QDA")
                                 )
 
-performance_table %>%
-      knitr::kable(digits=4, caption='Test Performance Metrics')
+# performance_table %>%
+#       knitr::kable(digits=4, caption='Test Performance Metrics')
 ```
 
 ### K-Nearest Neighbors Model
@@ -435,8 +435,8 @@ knn_tune_results <- tune_grid(knn_wf, resamples=resamples,
                               control=cv_control,
                               grid=grid_random(knn_model_params, size=22)) 
 
-show_best(knn_tune_results, metric="accuracy", n=1)
-show_best(knn_tune_results, metric="roc_auc", n=1)
+# show_best(knn_tune_results, metric="accuracy", n=1)
+# show_best(knn_tune_results, metric="roc_auc", n=1)
 
 # Tune the model based on the best grid search result
 knn_tuned_model <- knn_wf %>% finalize_workflow(select_best(knn_tune_results, metric="roc_auc"))
@@ -455,11 +455,11 @@ knn_model_final_fit <- knn_tuned_model %>% fit(train_data)
 
 
 # Run Model on Test Data
-knn_results <- knn_model_fit %>% augment(test_data)
+knn_results <- knn_model_final_fit %>% augment(test_data)
 
 
 # Get Performance Thresholds
-knn_threshold_performance <- performance_func_1(knn_model_fit) 
+knn_threshold_performance <- performance_func_1(knn_model_final_fit) 
 
 # Change Pred Class metric based on threshold testing
 knn_results$.threshold_pred_class <- as.factor(ifelse(knn_results$.pred_Yes >= max_precision(knn_threshold_performance)$.threshold, "Yes", "No"))
@@ -475,9 +475,9 @@ performance_table <-  bind_rows(performance_table,
                                       pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
                                       mutate(model="KNN")
                                 )
-
-performance_table %>%
-      knitr::kable(digits=4, caption='Test Performance Metrics')
+# 
+# performance_table %>%
+#       knitr::kable(digits=4, caption='Test Performance Metrics')
 ```
 
 
@@ -541,17 +541,17 @@ elastic_cv_viz <- visualize_training(tune_results,
 # Fit EN Model
 # elasticnet_model_final_fit <- elasticnet_model_tuned %>% fit(train_data)
 
-tune_results %>% 
-    show_best(metric='accuracy') %>% 
-    select(-.config) %>% 
-    knitr::kable()
-
-test_predictions <- elasticnet_model_tuned %>%
-  predict(test_data) %>%
-  bind_cols(test_data)
-
-test_metrics <- test_predictions %>%
-  performance_metrics(truth = BlueTarp, estimate = .pred_class)
+# tune_results %>% 
+#     show_best(metric='accuracy') %>% 
+#     select(-.config) %>% 
+#     knitr::kable()
+# 
+# test_predictions <- elasticnet_model_tuned %>%
+#   predict(test_data) %>%
+#   bind_cols(test_data)
+# 
+# test_metrics <- test_predictions %>%
+#   performance_metrics(truth = BlueTarp, estimate = .pred_class)
 
 # View results before and after threshold picking
 performance_table <-  bind_rows(performance_table, 
@@ -580,7 +580,7 @@ log_roc <- get_ROC_plot(logreg_model_fit, train_data, test_data, "Log Reg Model"
 lda_roc <- get_ROC_plot(lda_model_fit, train_data, test_data, "LDA Model")
 qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model")
 knn_roc <- get_ROC_plot(knn_model_final_fit, train_data, test_data, "KNN Model")
-elastic_roc <- get_ROC_plot(elasticnet_model_tuned, train_data, test_data, "Penalized LR Model")
+elastic_roc <- get_ROC_plot(elasticnet_model_tuned, train_data, test_data, "PLR Model")
 
 # Visualize ROC plots
 lda_roc + qda_roc + log_roc + knn_roc + elastic_roc +  plot_layout(ncol=2)
