@@ -520,6 +520,16 @@ show_best(tune_results, metric='accuracy', n=1) %>%
 
 autoplot(tune_results)
 
+# Finalize workflow with best model and fit model
+elasticnet_model_tuned <- elasticnet_wf %>%
+    finalize_workflow(select_best(tune_results, metric="accuracy")) %>% 
+  fit(train_data)
+
+# Get preds with test data
+elastic_results <- elastic_model_fit %>% augment(test_data)
+
+
+
 # Visualize Penalized Log Fit
 elastic_cv_viz <- visualize_training(tune_results, 
                                  "Penalized Logistic 
@@ -528,38 +538,35 @@ elastic_cv_viz <- visualize_training(tune_results,
 # Run Model on Test Data
 # elastic_model_fit <- elasticnet_wf %>% fit(train_data)
 
-#elastic_results <- elastic_model_fit %>% augment(test_data)
 
 
+# Create Validation Metric Set
+# elasticnet_wf_fit_cv <- elasticnet_model_tuned %>% 
+#     fit_resamples(resamples, control=control_resamples(save_pred=TRUE),metrics=performance_metrics)
 
-# Finalize workflow with best model and fit model
-elasticnet_model_final_fit <- elasticnet_wf %>%
-    finalize_workflow(select_best(tune_results, metric="accuracy")) %>%
-    fit(train_data)
 
+# Fit EN Model
+# elasticnet_model_final_fit <- elasticnet_model_tuned %>% fit(train_data)
 
 tune_results %>% 
     show_best(metric='accuracy') %>% 
     select(-.config) %>% 
     knitr::kable()
 
-test_predictions <- elasticnet_model_final_fit %>%
+test_predictions <- elasticnet_model_tuned %>%
   predict(test_data) %>%
   bind_cols(test_data)
 
 test_metrics <- test_predictions %>%
   performance_metrics(truth = BlueTarp, estimate = .pred_class)
-
-
-
 ```
 
 
 
 ```{r cv-training, fig.cap="Cross Validation Metrics"}
 # Visualize Cross validation Metrics
-lda_cv_viz + qda_cv_viz + logreg_cv_viz + knn_cv_viz + plot_layout(ncol=2)
-elastic_cv_viz
+lda_cv_viz + qda_cv_viz + logreg_cv_viz + knn_cv_viz + elastic_cv_viz + plot_layout(ncol=2)
+
 ```
 
 
@@ -568,7 +575,7 @@ log_roc <- get_ROC_plot(logreg_model_fit, train_data, test_data, "Log Reg Model"
 lda_roc <- get_ROC_plot(lda_model_fit, train_data, test_data, "LDA Model")
 qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model")
 knn_roc <- get_ROC_plot(knn_model_final_fit, train_data, test_data, "KNN Model")
-elastic_roc <- get_ROC_plot(elasticnet_model_final_fit, train_data, test_data, "Penalized Log Reg Model")
+elastic_roc <- get_ROC_plot(elasticnet_model_tuned, train_data, test_data, "Penalized Log Reg Model")
 # Visualize ROC plots
 lda_roc + qda_roc + log_roc + knn_roc + elastic_roc +  plot_layout(ncol=2)
 ```
