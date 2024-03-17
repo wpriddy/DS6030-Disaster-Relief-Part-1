@@ -320,7 +320,7 @@ The QDA model performs better than the LDA model for the 10-fold cross-validatio
 At the selected threshold of 0.85 on the testing data, the QDA model only has 2 false positives. However, the number of true positives predicted is 312 which results in 30 less pockets of refuges being rescued and the number of false negatives is 78 which is an increase of 62.5% more blue tarps being unidentified compared to the logistic regression model. 
 
 
-### Metrics and Graphics
+
 
 ```{r LDA-QDA}
 
@@ -508,10 +508,10 @@ tune_results <- tune_grid(elasticnet_wf,
                           grid=grid_random(parameters, size=200), 
                           metrics=performance_metrics)
 
-show_best(tune_results, metric='accuracy', n=1) %>% 
-    knitr::kable()
-
-autoplot(tune_results)
+# show_best(tune_results, metric='accuracy', n=1) %>% 
+#     knitr::kable()
+# 
+# autoplot(tune_results)
 
 # Finalize workflow with best model and fit model
 elasticnet_model_tuned <- elasticnet_wf %>%
@@ -568,6 +568,8 @@ performance_table %>%
       knitr::kable(digits=4, caption='Test Performance Metrics')
 ```
 
+### Metrics and Graphics
+
 ```{r cv-training, fig.cap="Cross Validation Metrics"}
 
 # Visualize Cross validation Metrics
@@ -610,11 +612,10 @@ knn_conf_matrix <- conf_mat(knn_results, estimate=.threshold_pred_class, truth=B
 en_conf_matrix <- conf_mat(elastic_results, estimate=.pred_class, truth=BlueTarp)
 
 
-en_conf_matrix
+# en_conf_matrix
 ```
 # Conclusion {-}  
 
-TEXT
 
 
 
