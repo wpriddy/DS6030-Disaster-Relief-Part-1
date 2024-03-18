@@ -410,8 +410,7 @@ The KNN model performs better than the other models looking at the 10-fold cross
 
 The KNN model has 5 false positives and 43 false negatives, and finds more true positive blue tarp locations than all of the other models so far, narrowly beating out logistic regression with 5 more true positives, which means 5 more pockets of displaced persons found. 5 more true positives has significant real world significance in this case, since every additional correct pocket found is possibly many lives saved. So, finding more true blue tarp locations is the most important factor, since it means there will be more people saved and less errors made in the search, making the 20 neighbor KNN model a favorable option.
 
-We tried several counts of neighbors for the KNN model and ended up choosing 20 neighbors due to it having the best performance metrics, importantly with the highest specificity since that is the metric with the most room for improvement. Lower than 20 neighbors (tested 10) indicated to possibly have signs of overfitting and higher K 
-values had worse performance metrics on test data.
+We tuned the neighbors parameter to get the optimal number of neighbors that maximizes the roc_auc metric, which ended up being 17. The roc_auc value for this number of neighbors is about 0.994.
 
 ```{r KNN-model, message=FALSE, warning=FALSE}
 
@@ -481,6 +480,12 @@ performance_table <-  bind_rows(performance_table,
 
 
 ### Penalized Logistic Regression Model
+The penalized log model using elasticnet (L1-L2 regularization) performs better than LDA and QDA, but worse than untuned logistic regression and KNN overall when looking at the performance metrics. The sensitivity, accuracy, and precision are pretty similar to the other models and are all above 0.995, indicating the model does very well on the test data. However, the specificity is around 0.87, which is more than 2% less than the KNN model. This is a very important distinction because even though it is only a couple percentage points lower, it means a lower rate of true positives, or displaced persons found accurately using this model, so using the KNN model over this would likely result in saving more lives and less mistakes of military going to the wrong spots.
+
+The penalized log model has 11 false positives and 37 false negatives. While the model  finds 5 more true positive blue tarp locations than the previous best model, KNN, it also has 6 more false positives. This is a big deterrent to the model since a higher false positive rate means a higher chance of military going to a wrong pocket, costing valuable time that could end up meaning less lives saved. This makes the KNN model more attractive as a model choice compared to the penalized logistic regression model.
+
+We tuned the penalty and mixture parameter to get the optimal number that maximizes accuracy of the model using a range of (-20,-10) for penalty and (0,10) for mixture.
+
 
 ```{r penalized log-model, message=FALSE, warning=FALSE}
 
@@ -607,6 +612,15 @@ en_distribution <- distribution_graph(elasticnet_model_tuned , train_data, "Pena
 lda_distribution + qda_distribution + log_reg_distribution + knn_distribution + en_distribution + plot_layout(ncol=2)
 ```
 
+```{r tuning-results, fig.cap="KNN and Penalized Log Reg Tuning Results"}
+
+knn_tuning_viz <- autoplot(knn_tune_results)
+elastic_tuning_viz <- autoplot(tune_results)
+
+knn_tuning_viz + elastic_tuning_viz + plot_layout(ncol=2)
+```
+
+
 ```{r confusion-matrix, message=FALSE, warning=FALSE}
 
 # Create Confusion Matrixes to reference TP, FP,TN, FP in discussion of results
@@ -620,13 +634,18 @@ en_conf_matrix <- conf_mat(elastic_results, estimate=.pred_class, truth=BlueTarp
 # knn_conf_matrix
 # qda_conf_matrix
 ```
+
+
+
 # Conclusion {-}  
 
 Based on our analyses, we found that the K-Nearest Neighbors Model performs the best out of the five models explored. Based on our performance metrics of specificity, sensitivity, accuracy, precision, and AUC, this model consistently scored either higher than, or similarly to, the other models. In particular, the KNN Model had the highest specificity, accuracy, and precision out of all the models we tried, with values of 0.8923, 0.9963, and 0.9966, respectively. This model incorrectly classified 5 non-tarps as tarps, and incorrectly classified 42 tarps as non-tarps. We found this to be the best combination of false-positives and true-negatives in order to efficiently allocate resources in a rescue situation. In particular, the 5 non-tarps which were classified as tarps was relatively low, which would allow rescue teams to avoid performing operations at non-tarp locations. 
 
 That being said, most of the models performed very well, as can be seen by the test performance metrics. There were no models which significantly outperformed, or underperformed, based on our performance metrics and qualitative analysis. We have high confidence in our results especially considering the amount of exploration of models which we undertook. Each model was 10-fold cross-validated, and any tunable parameter was tuned as well. Thus, we have high confidence that our results are an accurate depiction of model performance, and since all models performed relatively well, we have high confidence in our results.  
 
-Based on this confidence, we believe that our work would be effective in terms of helping saving human lives. In particular, our high threshold reduces the false-positive rate - the rate at which non-tarps are classified as tarps. By reducing this quantity, we can reduce the number of misinformed rescuers who may be sent to areas where there are no people to be rescued. This is great, but comes with the tradeoff in that the true-negative rate is higher. However, this can be remedied in later rescue attempts by lowering the threshold. This allows for an initial efficient use of rescue resources. Therefore, we believe that these well-performing models would be effective in saving human lives by efficiently pointing rescue resources towards those who need it.
+Based on this confidence, we believe that our work would be effective in terms of helping saving human lives. In particular, our high threshold reduces the false-positive rate - the rate at which non-tarps are classified as tarps. By reducing this quantity, we can reduce the number of misinformed rescuers who may be sent to areas where there are no people to be rescued. This is great, but comes with the trade off in that the true-negative rate is higher. However, this can be remedied in later rescue attempts by lowering the threshold. This allows for an initial efficient use of rescue resources. Therefore, we believe that these well-performing models would be effective in saving human lives by efficiently pointing rescue resources towards those who need it.
+
+One additional action our team could take to improve model results is to use ensemble methods. Two types of ensemble methods are bagging and boosting, and these methods would possibly improve our results by combining multiple model predictions rather that what we are currently doing of looking at individual models. Doing this could reduce variance and improve accuracy and other performance metrics. To do this, we would use stacking, where a meta-model would be trained on the predictions of multiple base models that we felt performed the best, such as KNN and logistic regression, and combine the predictions of these models to make a final prediction. 
 
 
 # Appendix {-}
