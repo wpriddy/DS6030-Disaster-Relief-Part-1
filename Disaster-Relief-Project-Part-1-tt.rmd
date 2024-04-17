@@ -563,6 +563,69 @@ test_metrics <- test_predictions %>%
 ```
 
 
+## Random Forest Model
+```{r rf-model, message=FALSE, warning=FALSE}
+# Create RF Model
+rf_spec <- rand_forest(engine="ranger", 
+                       mode="classification", 
+                       mtry=tune(), 
+                       trees=tune(), 
+                       min_n=tune())
+
+# Create Workflow
+rf_wf <- workflow() %>%
+    add_model(rf_spec) %>%
+    add_recipe(rec)
+
+# Testing a range of parameter values
+parameters <- extract_parameter_set_dials(rf_wf) %>% 
+    update(
+        mtry=mtry(c(1, 3)),
+        trees=trees(c(250, 500)),
+        min_n=min_n(c(2, 10))
+    )
+
+
+
+# Identify best model based on searching the parameter space
+tune_results <- tune_grid(rf_wf, 
+                          resamples=resamples,
+                          grid=grid_random(parameters, size=300), 
+                          metrics=performance_metrics)
+
+show_best(tune_results, metric='accuracy', n=1) %>% 
+    knitr::kable()
+
+autoplot(tune_results)
+
+# Finalize workflow with best model and fit model
+rf_model_tuned <- rf_wf %>%
+    finalize_workflow(select_best(tune_results, metric="accuracy")) %>% 
+  fit(train_data)
+
+# Get preds with test data
+rf_results <- rf_model_tuned %>% augment(test_data)
+
+
+
+# Visualize Penalized Log Fit
+rf_cv_viz <- visualize_training(tune_results, 
+                                 "Random Forest Validation Results")
+
+tune_results %>% 
+    show_best(metric='accuracy') %>% 
+    select(-.config) %>% 
+    knitr::kable()
+
+test_predictions <- rf_model_tuned %>%
+  predict(test_data) %>%
+  bind_cols(test_data)
+
+test_metrics <- test_predictions %>%
+  performance_metrics(truth = BlueTarp, estimate = .pred_class)
+```
+
+
 
 ```{r cv-training, fig.cap="Cross Validation Metrics"}
 # Visualize Cross validation Metrics
@@ -572,13 +635,15 @@ lda_cv_viz + qda_cv_viz + logreg_cv_viz + knn_cv_viz + elastic_cv_viz + plot_lay
 
 
 ```{r log-ROC, warning=FALSE, message=FALSE, fig.cap="ROC Curves"}
-log_roc <- get_ROC_plot(logreg_model_fit, train_data, test_data, "Log Reg Model")
-lda_roc <- get_ROC_plot(lda_model_fit, train_data, test_data, "LDA Model")
-qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model")
-knn_roc <- get_ROC_plot(knn_model_final_fit, train_data, test_data, "KNN Model")
-elastic_roc <- get_ROC_plot(elasticnet_model_tuned, train_data, test_data, "Penalized Log Reg Model")
+# log_roc <- get_ROC_plot(logreg_model_fit, train_data, test_data, "Log Reg Model")
+# lda_roc <- get_ROC_plot(lda_model_fit, train_data, test_data, "LDA Model")
+# qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model")
+# knn_roc <- get_ROC_plot(knn_model_final_fit, train_data, test_data, "KNN Model")
+# elastic_roc <- get_ROC_plot(elasticnet_model_tuned, train_data, test_data, "Penalized Log Reg Model")
+rf_roc <- get_ROC_plot(rf_model_tuned, train_data, test_data, "Random Forest Model")
 # Visualize ROC plots
-lda_roc + qda_roc + log_roc + knn_roc + elastic_roc +  plot_layout(ncol=2)
+# lda_roc + qda_roc + log_roc + knn_roc + elastic_roc + rf_roc + plot_layout(ncol=2)
+rf_roc
 ```
 
 
@@ -589,17 +654,15 @@ lda_distribution <- distribution_graph(lda_model_fit, train_data, "LDA")
 qda_distribution <- distribution_graph(qda_model_fit, train_data, "QDA")
 knn_distribution <- distribution_graph(knn_model_fit, train_data, "KNN Model")
 elastic_distribution <- distribution_graph(elasticnet_model_tuned, train_data, "Penalized Log Reg Model")
+rf_distribution <- distribution_graph(rf_model_tuned, train_data, "Random Forest Model")
 
 # Visualize Distributions
-lda_distribution + qda_distribution + log_reg_distribution + knn_distribution + elastic_distribution +
+lda_distribution + qda_distribution + log_reg_distribution + knn_distribution + 
+  elastic_distribution + rf_distribution
   plot_layout(ncol=2)
 
 ```
 
-
-```{r}
-elastic_results
-```
 
 ```{r}
 # View results before and after threshold picking
@@ -624,6 +687,7 @@ logreg_conf_matrix <- conf_mat(logreg_results, estimate=.threshold_pred_class, t
 lda_conf_matrix <- conf_mat(lda_results, estimate=.threshold_pred_class, truth=BlueTarp)
 qda_conf_matrix <- conf_mat(qda_results, estimate=.threshold_pred_class, truth=BlueTarp)
 knn_conf_matrix <- conf_mat(knn_results, estimate=.threshold_pred_class, truth=BlueTarp)
+
 
 ```
 # Conclusion {-}  
