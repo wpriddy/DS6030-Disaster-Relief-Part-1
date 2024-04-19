@@ -906,15 +906,33 @@ rf_cv_viz + plot_layout(ncol=2)
 
 ```{r log-ROC, warning=FALSE, message=FALSE, fig.cap="ROC Curves", fig.width=7}
 
-log_roc <- get_ROC_plot(logreg_model_fit, train_data, test_data, "Log Reg Model")
-lda_roc <- get_ROC_plot(lda_model_fit, train_data, test_data, "LDA Model")
-qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model")
-knn_roc <- get_ROC_plot(knn_model_final_fit, train_data, test_data, "KNN Model")
-elastic_roc <- get_ROC_plot(elasticnet_model_tuned, train_data, test_data, "PLR Model")
-linear_svm_roc <- get_ROC_plot(linear_svm_final_fit, train_data, test_data, "Linear SVM Model")
-poly_svm_roc <- get_ROC_plot(poly_svm_final_fit, train_data, test_data, "Polynomial SVM Model")
-rbf_svm_roc <- get_ROC_plot(rbf_svm_final_fit, train_data, test_data, "RBF SVM Model")
-rf_roc <- get_ROC_plot(rf_model_tuned, train_data, test_data, "Random Forest Model")
+log_roc <- get_ROC_plot(logreg_model_fit, train_data, test_data, "Log Reg Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
+lda_roc <- get_ROC_plot(lda_model_fit, train_data, test_data, "LDA Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
+qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
+knn_roc <- get_ROC_plot(knn_model_final_fit, train_data, test_data, "KNN Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
+elastic_roc <- get_ROC_plot(elasticnet_model_tuned, train_data, test_data, "PLR Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
+linear_svm_roc <- get_ROC_plot(linear_svm_final_fit, train_data, test_data, "Linear SVM Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
+poly_svm_roc <- get_ROC_plot(poly_svm_final_fit, train_data, test_data, "Polynomial SVM Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
+rbf_svm_roc <- get_ROC_plot(rbf_svm_final_fit, train_data, test_data, "RBF SVM Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
+rf_roc <- get_ROC_plot(rf_model_tuned, train_data, test_data, "Random Forest Model") + 
+              coord_cartesian(xlim=c(0, 0.25), ylim=c(0.75, 1)) +
+              guides(colour="none")
 
 # Visualize ROC plots
 lda_roc + qda_roc + log_roc + knn_roc + elastic_roc + linear_svm_roc + poly_svm_roc + rbf_svm_roc + rf_roc + plot_layout(ncol=2)
