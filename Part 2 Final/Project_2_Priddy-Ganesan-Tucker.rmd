@@ -680,7 +680,7 @@ test_metrics <- test_predictions %>%
 ```
 
 
-### Linear Support Sector Machine
+### Linear Support Vector Machine
 
 Random words to fill in later
 
@@ -752,7 +752,7 @@ autoplot(linear_svm_tune_grid_results) + ggtitle('Default Linear Kernel Tuning')
 ```
 
 
-### Polynomial Support Sector Machine
+### Polynomial Support Vector Machine
 
 Random words to fill in later
 
@@ -790,9 +790,9 @@ autoplot(poly_svm_tune_grid_results) + ggtitle('Default Polynomial Kernel Tuning
 # Select best model
 best_svm_poly <- select_best(poly_svm_tune_grid_results, metric="roc_auc")
 
-poly_svm_model_tuned <- linear_svm_wf %>% 
+poly_svm_model_tuned <- poly_svm_wf %>% 
                           finalize_workflow(best_svm_poly)
-
+show_notes(.Last.tune.result)
 # Create Validation Metric Set
 poly_svm_wf_fit_cv <- poly_svm_model_tuned %>%
               fit_resamples(resamples, control=cv_control, metrics=performance_metrics)
@@ -800,7 +800,7 @@ poly_svm_wf_fit_cv <- poly_svm_model_tuned %>%
 # Visualize Poly SVM Fit
 poly_svm_cv_viz <- visualize_training(poly_svm_wf_fit_cv, "Polynomial SVM Validation Results")
 
-# Fit Linear SVM
+# Fit Poly SVM
 poly_svm_final_fit <- poly_svm_model_tuned %>% fit(train_data)
  
  # Run Model on Test Data
@@ -816,7 +816,7 @@ poly_svm_results$.threshold_pred_class <- as.factor(ifelse(poly_svm_results$.pre
 performance_table <-  bind_rows(performance_table, 
                                 performance_metrics(poly_svm_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
                                   bind_rows(roc_auc(poly_svm_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
-                                  mutate(Threshold = max_precision(linear_svm_threshold_performance)$.threshold) %>%
+                                  mutate(Threshold = max_precision(poly_svm_threshold_performance)$.threshold) %>%
                                   dplyr::select(c(Threshold, .metric, .estimate)) %>%
                                       pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
                                       mutate(model="Polynomial SVM")
@@ -825,12 +825,82 @@ performance_table <-  bind_rows(performance_table,
  
 ```
 
+
+### Radial Basis Function Support Vector Machine
+The Radial Basis Function (RBF) Support Vector Machine model does not perform well compared to some of the previous models. The specificity, which is the metric that varies the most between the models, is below 0.85, worse than several of the other models we tested. The difference is only a few percent below, but this would have a very important real-world impact, with less displaced persons possibly being saved. However, the RBF SVM model performs well overall, with an ROC curve with very close to a 100% true positive rate, performing much better than random guessing.
+
+```{r rbf-svm}
+
+# Create Model
+rbf_svm_model <- svm_rbf(mode='classification',
+                                   engine='kernlab', 
+                                   cost=tune(), 
+                                   margin=tune(), 
+                                   rbf_sigma=tune()
+                                   )
+
+# Define Workflow
+rbf_svm_wf <- workflow() %>%
+                add_recipe(rec) %>%
+                add_model(rbf_svm_model)
+
+# extract tuning parameters
+p <- extract_parameter_set_dials(rbf_svm_wf)
+
+# Tune the model
+rbf_svm_tune_grid_results <- tune_bayes(rbf_svm_wf,
+                               resamples = resamples,
+                               control = control_bayes(save_pred=TRUE),
+                               param_info=p,
+                               iter=10
+                               ) 
+
+# Visualize Training
+autoplot(rbf_svm_tune_grid_results) + ggtitle('Default RBF Kernel Tuning')+
+   theme(plot.title = element_text(hjust = 0.5))
+
+# Select best model
+best_svm_rbf <- select_best(rbf_svm_tune_grid_results, metric="roc_auc")
+
+rbf_svm_model_tuned <- rbf_svm_wf %>% 
+                          finalize_workflow(best_svm_rbf)
+
+# Create Validation Metric Set
+rbf_svm_wf_fit_cv <- rbf_svm_model_tuned %>%
+              fit_resamples(resamples, control=cv_control, metrics=performance_metrics)
+
+# Visualize RBF SVM Fit
+rbf_svm_cv_viz <- visualize_training(rbf_svm_wf_fit_cv, "RBF SVM Validation Results")
+
+# Fit RBF SVM
+rbf_svm_final_fit <- rbf_svm_model_tuned %>% fit(train_data)
+ 
+ # Run Model on Test Data
+rbf_svm_results <- rbf_svm_final_fit %>% augment(test_data)
+
+# Get Performance Thresholds
+rbf_svm_threshold_performance <- performance_func_1(rbf_svm_final_fit)
+
+# Change Pred Class metric based on threshold testing
+rbf_svm_results$.threshold_pred_class <- as.factor(ifelse(rbf_svm_results$.pred_Yes >= max_precision(rbf_svm_threshold_performance)$.threshold, "Yes", "No"))
+
+ # View results before and after threshold picking
+performance_table <-  bind_rows(performance_table, 
+                                performance_metrics(rbf_svm_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
+                                  bind_rows(roc_auc(rbf_svm_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(rbf_svm_threshold_performance)$.threshold) %>%
+                                  dplyr::select(c(Threshold, .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="RBF SVM")
+                                )
+```
 ### Metrics and Graphics
 
 ```{r cv-training, fig.cap="Cross Validation Metrics"}
 
 # Visualize Cross validation Metrics
-lda_cv_viz + qda_cv_viz + logreg_cv_viz + knn_cv_viz + elastic_cv_viz + linear_svm_cv_viz + poly_svm_cv_viz + rf_cv_viz + plot_layout(ncol=2)
+lda_cv_viz + qda_cv_viz + logreg_cv_viz + knn_cv_viz + elastic_cv_viz + linear_svm_cv_viz + poly_svm_cv_viz + rbf_svm_cv_viz + 
+rf_cv_viz + plot_layout(ncol=2)
 ```
 
 
@@ -842,11 +912,12 @@ qda_roc <- get_ROC_plot(qda_model_fit, train_data, test_data, "QDA Model")
 knn_roc <- get_ROC_plot(knn_model_final_fit, train_data, test_data, "KNN Model")
 elastic_roc <- get_ROC_plot(elasticnet_model_tuned, train_data, test_data, "PLR Model")
 linear_svm_roc <- get_ROC_plot(linear_svm_final_fit, train_data, test_data, "Linear SVM Model")
-poly_svm_roc <- get_ROC_plot(poly_svm_final_fit, train_data, test_data, "Linear SVM Model")
+poly_svm_roc <- get_ROC_plot(poly_svm_final_fit, train_data, test_data, "Polynomial SVM Model")
+rbf_svm_roc <- get_ROC_plot(rbf_svm_final_fit, train_data, test_data, "RBF SVM Model")
 rf_roc <- get_ROC_plot(rf_model_tuned, train_data, test_data, "Random Forest Model")
 
 # Visualize ROC plots
-lda_roc + qda_roc + log_roc + knn_roc + elastic_roc + linear_svm_roc + poly_svm_roc + rf_roc + plot_layout(ncol=2)
+lda_roc + qda_roc + log_roc + knn_roc + elastic_roc + linear_svm_roc + poly_svm_roc + rbf_svm_roc + rf_roc + plot_layout(ncol=2)
 
 ```
 
@@ -861,6 +932,7 @@ knn_conf_matrix <- conf_mat(knn_results, estimate=.threshold_pred_class, truth=B
 en_conf_matrix <- conf_mat(elastic_results, estimate=.pred_class, truth=BlueTarp)
 lsvm_conf_matrix <- conf_mat(linear_svm_results, estimate=.pred_class, truth=BlueTarp)
 psvm_conf_matrix <- conf_mat(poly_svm_results, estimate=.pred_class, truth=BlueTarp)
+rbfsvm_conf_matrix <- conf_mat(rbf_svm_results, estimate=.pred_class, truth=BlueTarp)
 rf_conf_matrix <- conf_mat(rf_results, estimate=.pred_class, truth=BlueTarp)
 
 
