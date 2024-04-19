@@ -1,5 +1,5 @@
 ---
-title: "Disaster Relief Project Part 1"
+title: "Disaster Relief Project Part 2"
 author: "Mahin Ganesan, Wyatt Priddy, and Taylor Tucker"
 date: "`r Sys.Date()`"
 output:
@@ -681,8 +681,11 @@ test_metrics <- test_predictions %>%
 
 
 ### Linear Support Vector Machine
+The Linear Support Vector Machine model performs better than several of the previous models, such as LDA and QDA, but is worse than the best models, KNN and Random Forest.
+Similar to the other models, the cross-validation sensitivity, precision, and accuracy are very close to 100% in this model, but the specificity is much lower, at a rate of about 0.88. This rate is lower than the random forest and KNN models by a large amount, meaning that there would be more false positives and therefore a higher chance of the army going to an area without survivors, losing valuable time that could be used saving displaced persons.
+ 
 
-Random words to fill in later
+The model has 30039 false positives and 176 false negatives. This is a drastic improvement over the LDA and QDA results, but does not match up with the KNN and random forest models in terms of test accuracy. So, we do not plan on utilizing the linear SVM model when trying to find blue tarps for survivors in Haiti.
 
 ```{r linear-svm}
 
@@ -720,7 +723,7 @@ linear_svm_wf_fit_cv <- linear_svm_model_tuned %>%
               fit_resamples(resamples, control=cv_control,metrics=performance_metrics)
 
 # Visualize Linear SVM Fit
-linear_svm_cv_viz <- visualize_training(linear_svm_wf_fit_cv, "KNN Validation Results")
+linear_svm_cv_viz <- visualize_training(linear_svm_wf_fit_cv, "Linear SVM Validation Results")
 
 # Fit Linear SVM
 linear_svm_final_fit <- linear_svm_model_tuned %>% fit(train_data)
@@ -827,7 +830,9 @@ performance_table <-  bind_rows(performance_table,
 
 
 ### Radial Basis Function Support Vector Machine
-The Radial Basis Function (RBF) Support Vector Machine model does not perform well compared to some of the previous models. The specificity, which is the metric that varies the most between the models, is below 0.85, worse than several of the other models we tested. The difference is only a few percent below, but this would have a very important real-world impact, with less displaced persons possibly being saved. However, the RBF SVM model performs well overall, with an ROC curve with very close to a 100% true positive rate, performing much better than random guessing.
+The Radial Basis Function (RBF) Support Vector Machine model does not perform well compared to some of the previous models. The specificity, which is the metric that varies the most between the models, is below 0.85, worse than several of the other models we tested. The difference is only a few percent below, but this would have a very important real-world impact, with less displaced persons possibly being saved. the model also performs worse than the other SVM models, indicating the possibility that the data is linearly separable. However, the RBF SVM model performs well overall, with an ROC curve with very close to a 100% true positive rate, performing much better than random guessing. 
+
+The model has 4433 false positives and 552 false negatives. While the model performs better than the linear svm model in terms of having much less false positives, this accounts for a little more than 1% improvement compared to performing ~3% worse than the linear svm model for false negatives. Every single false negative could mean less displaced persons saved, so this model is less attractive of a choice than previous models.
 
 ```{r rbf-svm}
 
