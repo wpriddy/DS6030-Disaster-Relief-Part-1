@@ -267,7 +267,7 @@ max_precision <- function(performance_data){
 
 ### Logistic Regression Model
 
-The logistic model was fit across the 10-fold cross-validation. The model seems to be generalizing well between the different folds with minimal variation throughout the training performance metrics as seen in *Figure 3*. The average performance metrics tell us that the initial model has very high sensitivity with little variation across the folds. Specificity is much lower with more variation in the results indicating is it not as stable. This can be interpreted as the model is performing well at classifying the blue tarps. However it is classifying many objects that are not blue tarps creating many false positives as seen in the lower specificity. 
+The logistic model was fit across the 10-fold cross-validation. The model seems to be generalizing well between the different folds with minimal variation throughout the training performance metrics as seen in *Figure 4*. The average performance metrics tell us that the initial model has very high sensitivity with little variation across the folds. Specificity is much lower with more variation in the results indicating is it not as stable. This can be interpreted as the model is performing well at classifying the blue tarps. However it is classifying many objects that are not blue tarps creating many false positives as seen in the lower specificity. 
 
 
 ```{r log-model-training, message=FALSE, warning=FALSE, fig.cap="Logistic Regression CV Results", fig.width=5, fig.height=3}
@@ -301,7 +301,7 @@ logreg_cv_viz <- visualize_training(logreg_fit_cv, "Logreg Cross Validation Resu
 logreg_cv_viz
 ```
 
-After performing threshold analysis, a threshold of 0.84 was selected to minimize the false positives while keeping a substantial portion of the true positives in the analysis. Seen in *Table 1*, Utilizing this threshold resulted in a precision rating of 0.996 meaning that 99.6% of the positive predictions in the model are true positives. The AUC score of 0.999 means that the model has near perfect classification abilities and is highly reliable in determining whether a data point is a blue tarp or not. Similar to the results from the training data, specificity is lower at 87.7% on the tesing data. The performance on the testing data in relation to the cross-validation of the training set indicates that the model is not overfitting on the training data
+After performing threshold analysis, a threshold of 0.85 was selected to minimize the false positives while keeping a substantial portion of the true positives in the analysis. Seen in *Table 3*, Utilizing this threshold resulted in a precision rating of 0.998 meaning that 99.8% of the positive predictions in the model are true positives. The AUC score of 0.999 means that the model has near perfect classification abilities and is highly reliable in determining whether a data point is a blue tarp or not. Similar to the results from the training data, specificity is lower at 97.7% on the tesing data. The performance on the testing data in relation to the cross-validation of the training set indicates that the model is not overfitting on the training data
 
 ```{r log-model-threshold-analysis, warning=FALSE, message=FALSE}
 
@@ -327,7 +327,7 @@ performance_table <-  performance_metrics(logreg_results, truth=BlueTarp, estima
 
 ```
 
-At the threshold of 0.84, 342 of the 390 blue tarps in the testing set are correctly identified by the model. Of the 12,259 not blue tarps, only 4 are false positives. Of all the blue tarps identified by the model, there is a 98.8% rate of aid workers time and resources not being wasted on futile searches. While 48 blue tarps were unidentified by the model (12.3% of total tarps), once the aid workers can provide resources to the 342 correctly identified refuges we can then expand the search. This will help us maximize a timely and precise search of refugees accounting for early and easy wins before expanding the search areas to get the last pockets of refugees. 
+At the threshold of 0.85, 10,930 of the 14,480 blue tarps in the testing set are correctly identified by the model. Of the 1,989,697 not blue tarps, only 29,133 are false positives. Of all the blue tarps identified by the model, there is a 69.1% rate of aid workers time and resources not being wasted on futile searches. While 326 blue tarps were unidentified by the model (2.2% of total tarps), once the aid workers can provide resources to the 14,154 correctly identified refuges we can then expand the search. This will help us maximize a timely and precise search of refugees accounting for early and easy wins before expanding the search areas to get the last pockets of refugees. 
 
 ```{r log-reg-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Logistic Regression ROC Curve"}
 
@@ -424,7 +424,7 @@ performance_table <-  bind_rows(performance_table,
                                 )
 ```
 
-The penalized log model using elasticnet (L1-L2 regularization) performs better than LDA and QDA, but worse than untuned logistic regression and KNN overall when looking at the performance metrics. The sensitivity, accuracy, and precision are pretty similar to the other models and are all above 0.995, indicating the model does very well on the test data. However, the specificity is around 0.87, which is more than 2% less than the KNN model. This is a very important distinction because even though it is only a couple percentage points lower, it means a lower rate of true positives, or displaced persons found accurately using this model, so using the KNN model over this would likely result in saving more lives and less mistakes of military going to the wrong spots.
+The penalized logistic model using elasticnet (L1-L2 regularization) performs better than LDA and QDA, but worse than the untuned logistic regression and KNN overall when looking at the performance metrics. The sensitivity, accuracy, and precision are pretty similar to the other models and are all above 0.995, indicating the model does very well on the test data. However, the specificity is around 0.87, which is more than 2% less than the KNN model. This is a very important distinction because even though it is only a couple percentage points lower, it means a lower rate of true positives, or displaced persons found accurately using this model, so using the KNN model over this would likely result in saving more lives and less mistakes of military going to the wrong spots.
 
 ```{r en-cv-viz, fig.height=2, fig.width=5, fig.cap="Penalized Logistic Regression Cross Validation Results"}
 
@@ -432,7 +432,7 @@ elastic_cv_viz
 
 ```
 
-The penalized log model has 11 false positives and 37 false negatives. While the model  finds 5 more true positive blue tarp locations than the previous best model, KNN, it also has 6 more false positives. This is a big deterrent to the model since a higher false positive rate means a higher chance of military going to a wrong pocket, costing valuable time that could end up meaning less lives saved. This makes the KNN model more attractive as a model choice compared to the penalized logistic regression model.
+The penalized logistic model has 5,288 false positives and 360 false negatives. While the model  finds 6,121 more true positive blue tarp locations than the previous best model, KNN, it also has 1,270 more false positives. This is a big deterrent to the model since a higher false positive rate means a higher chance of military going to a wrong pocket, costing valuable time that could end up meaning less lives saved. This makes the KNN model more attractive as a model choice compared to the penalized logistic regression model.
 
 ```{r en-viz, fig.height=2, fig.width=4, message=FALSE, warning=FALSE, fig.cap="Penalized Logistic Regression ROC Curve"}
 
@@ -538,15 +538,15 @@ performance_table <-  bind_rows(performance_table,
 #       knitr::kable(digits=4, caption='Test Performance Metrics')
 ```
 
-The LDA Model has similar variations in the cross-validation performance as the logistic regression model seen in *Figure 3*. Specificity seems to be the only metric not performing at above 97%. The specificity across the 10-fold cross-validation of the training set is around 80% with slightly less variation within one standard error than the logistic regression. 
+The LDA Model has similar variations in the cross-validation performance as the logistic regression model seen in *Figure 9*. Specificity seems to be the only metric not performing at above 97%. The specificity across the 10-fold cross-validation of the training set is around 80% with slightly less variation within one standard error than the logistic regression. 
 
 ```{r LDA-cv, fig.height=2, fig.width=5, fig.cap="Linear Discriminate Analysis Cross Validation Results"}
 lda_cv_viz
 ```
 
-The threshold selected was also 0.84 to keep the number of false positives at a minimum. At this threshold, the LDA model performs worse across all performance metrics and than logistic regression model, seen in *Table 1*. This seems to indicate that a linear decision boundary may not be the best fit for the data set being utilized. 
+The threshold selected was also 0.84 to keep the number of false positives at a minimum. At this threshold, the LDA model performs worse across all performance metrics and than logistic regression model, seen in *Table 3*. This seems to indicate that a linear decision boundary may not be the best fit for the data set being utilized. 
 
-At the selected threshold of 0.84, only 299 of the 390 blue tarps in the testing set are correctly identified by the model. Of the 12,259 not blue tarps, 88 were false positives. This would represent an increase of 2100% more false positives and could equate to numerous man hours and resources being wasted if we were to go with this model. 91 blue tarps were false negatives also resulting in more pockets of refuges being missed by this model. 
+At the selected threshold of 0.84, only 10,930 of the 14,480 blue tarps in the testing set are correctly identified by the model. Of the 1,989,697 not blue tarps, 29,133 were false positives. This would represent an increase of 600% more false positives than the penalized logistic regression and could equate to numerous man hours and resources being wasted if we were to go with this model. 3,550 blue tarps were false negatives also resulting in more pockets of refuges being missed by this model. 
 
 ```{r lda-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Linear Discriminate Analysis ROC Curve"}
 
@@ -564,7 +564,7 @@ The QDA model performs better than the LDA model for the 10-fold cross-validatio
 qda_cv_viz
 ```
 
-At the selected threshold of 0.85 on the testing data, the QDA model only has 2 false positives. However, the number of true positives predicted is 312 which results in 30 less pockets of refuges being rescued and the number of false negatives is 78 which is an increase of 62.5% more blue tarps being unidentified compared to the logistic regression model. 
+At the selected threshold of 0.85 on the testing data, the QDA model only has 2,003 false positives. However, the number of true positives predicted is 9,007 which results in 5,147 less pockets of refuges being rescued and the number of false negatives is 5,473 which is an increase of 1,578% more blue tarps being unidentified compared to the logistic regression model. 
 
 ```{r qda-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Quadratic Discriminate Analysis ROC Curve"}
 
@@ -649,7 +649,8 @@ The KNN model performs better than the other models looking at the 10-fold cross
 knn_cv_viz
 
 ```
-The KNN model has 5 false positives and 43 false negatives, and finds more true positive blue tarp locations than all of the other models so far, narrowly beating out logistic regression with 5 more true positives, which means 5 more pockets of displaced persons found. 5 more true positives has significant real world significance in this case, since every additional correct pocket found is possibly many lives saved. So, finding more true blue tarp locations is the most important factor, since it means there will be more people saved and less errors made in the search, making the 20 neighbor KNN model a favorable option.
+
+The KNN model has 4,018 false positives and 6,481 false negatives, and finds more true positive blue tarp locations than all of the other models so far, performing substantially worse than the logistic regression with 6,155 less true positives, which means thousands less pockets of displaced persons found. 6,155 less true positives has significant real world significance in this case, since every additional correct pocket missed is possibly many lives lost. So, finding more true blue tarp locations is the most important factor, since it means there will be more people saved and less errors made in the search, making the 20 neighbor KNN model an unfavorable option.
 
 
 ```{r knn-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="KNN ROC Curve"}
@@ -671,6 +672,8 @@ autoplot(knn_tune_results) +
 ```
 
 ### Random Forest
+
+The Random Forest Classifier model performed very well on this data, and indeed performed the best out of all of the classifiers. The model was trained and tuned using 10-fold cross validation. The parameters that were tuned were `mtry`, `trees`, and `min_n`, which represent the number of predictors which will be used at each split, the number of trees in the forest, and the minimum number of datapoints required for splitting a node, respectively.
 
 ```{r rf-model, message=FALSE, warning=FALSE}
 # Create RF Model
@@ -698,13 +701,13 @@ parameters <- extract_parameter_set_dials(rf_wf) %>%
 # Identify best model based on searching the parameter space
 tune_results <- tune_grid(rf_wf, 
                           resamples=resamples,
-                          grid=grid_random(parameters, size=300), 
+                          grid=grid_random(parameters, size=150), 
                           metrics=performance_metrics)
 
 show_best(tune_results, metric='accuracy', n=1) %>% 
     knitr::kable()
 
-autoplot(tune_results)
+
 
 # Finalize workflow with best model and fit model
 rf_model_tuned <- rf_wf %>%
@@ -714,9 +717,26 @@ rf_model_tuned <- rf_wf %>%
 # Get preds with test data
 rf_results <- rf_model_tuned %>% augment(test_data)
 
+# Get Performance Thresholds
+rf_threshold_performance <- performance_func_1(rf_model_tuned) 
+
+# Change Pred Class metric based on threshold testing
+rf_results$.threshold_pred_class <- as.factor(ifelse(rf_results$.pred_Yes >= max_precision(rf_threshold_performance)$.threshold, "Yes", "No"))
 
 
-# Visualize Penalized Log Fit
+# View results before and after threshold picking
+performance_table <-  bind_rows(performance_table, 
+                                performance_metrics(rf_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
+                                  bind_rows(roc_auc(rf_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(rf_threshold_performance)$.threshold %>% tail(n=1)) %>%
+                                  dplyr::select(c(Threshold, 
+                                                  .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="Random Forest")
+                                )
+
+
+# Visualize RF Fit
 rf_cv_viz <- visualize_training(tune_results, 
                                  "Random Forest Validation Results")
 
@@ -731,6 +751,9 @@ test_predictions <- rf_model_tuned %>%
 
 test_metrics <- test_predictions %>%
   performance_metrics(truth = BlueTarp, estimate = .pred_class)
+
+
+
 ```
 
 ```{r rf-cv, fig.height=2, fig.width=5, fig.cap="Random Forest Cross Validation Results"}
@@ -739,6 +762,7 @@ rf_cv_viz
 
 ```
 
+When analyzing the threshold performance, we found that there were many thresholds which performed equally well, so we chose the highest threshold so as to conform to our other models. At this threshold of 0.85, we found that the model had 1,695 false positives, and an ROC AUC score of 0.976.
 
 ```{r rf-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Random Forest ROC Curve"}
 
@@ -747,9 +771,18 @@ get_ROC_plot(rf_model_tuned, train_data, test_data, "Random Forest Model") +
               guides(colour="none")
 ```
 
+
+```{r rf-autoplot, fig.height= 3, fig.width=6, fig.cap="Tune Results"}
+
+autoplot(tune_results) + 
+  ggtitle('Random Forest Tuning Results')+
+   theme(plot.title = element_text(hjust = 0.5))
+
+```
+
 ### Linear Support Vector Machine
 
-```{r linear-svm}
+```{r linear-svm, warning=FALSE, message=FALSE}
 
 # Create Model
 linear_svm_model <- svm_linear(mode='classification', 
@@ -820,7 +853,7 @@ Similar to the other models, the cross-validation sensitivity, precision, and ac
 linear_svm_cv_viz
 ```
 
-The model has 30039 false positives and 176 false negatives. This is a drastic improvement over the LDA and QDA results, but does not match up with the KNN and random forest models in terms of test accuracy. So, we do not plan on utilizing the linear SVM model when trying to find blue tarps for survivors in Haiti.
+The model has 8,287 false positives and 315 false negatives. This is a drastic improvement over the LDA and QDA results, but does not match up with the KNN and random forest models in terms of test accuracy. So, we do not plan on utilizing the linear SVM model when trying to find blue tarps for survivors in Haiti.
 
 ```{r lscvm-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Linear Support Vector Machine ROC Curve"}
 
@@ -829,6 +862,8 @@ get_ROC_plot(linear_svm_final_fit, train_data, test_data, "Linear SVM Model") +
               guides(colour="none")
 
 ```
+
+For the Linear SVM model, we tuned the cost and margin. Cost represents the cost of predicting a smaple within or on the wrong side of the margin while margin is the epsilon for the loss function. We decided to use Bayesian hyperparameter tuning for our model, with ten iterations.
 
 ```{r lsvm-tune, fig.height= 3, fig.width=6, fig.cap="Tune Results"}
  
@@ -840,7 +875,9 @@ autoplot(linear_svm_tune_grid_results) + ggtitle('Default Linear Kernel Tuning')
 
 ### Polynomial Support Vector Machine
 
-```{r poly-svm}
+The Polynomial SVM performs well relative to most of the other models, but is not strong enough to be our final model choice for identifying blue tarp locations. The model has very high accuracy and precision, matching all of the other models, and has one of the better values of specificity from cross-validation, at about 0.84. However, it performs worse than KNN and Random Forest.
+
+```{r poly-svm, warning=FALSE, message=FALSE}
 
 # Create Model
 poly_svm_model <- svm_poly(mode='classification',
@@ -905,11 +942,14 @@ performance_table <-  bind_rows(performance_table,
 
 ```
 
+
 ```{r polysvm-cv, fig.height=2, fig.width=5, fig.cap="Polynomial Support Vector Machine Cross Validation Results"}
 
 poly_svm_cv_viz
 
 ```
+
+The model has 6,671 false positives and 195 false negatives. This compares well compared to most of the models, but does not perform as well as random forest. So, choosing this model would take us in the wrong direction in terms of saving the most displaced persons.
 
 ```{r polysvm-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Polynomial Support Vector Machine ROC Curve"}
 
@@ -918,6 +958,8 @@ get_ROC_plot(poly_svm_final_fit, train_data, test_data, "Polynomial SVM Model") 
               guides(colour="none")
 
 ```
+
+For the Polynomial SVM model, we tuned the cost, margin, degree, and scale factor. Degree determines which degree the polynomial should be, based on the one with the best roc_auc from our model. We decided to use Bayesian hyperparameter tuning for our model, with ten iterations.
 
 ```{r polysvm-tune, fig.height= 3, fig.width=6, fig.cap="Tune Results"}
 
@@ -1001,7 +1043,7 @@ rbf_svm_cv_viz
 
 ```
 
-The model has 4433 false positives and 552 false negatives. While the model performs better than the linear svm model in terms of having much less false positives, this accounts for a little more than 1% improvement compared to performing ~3% worse than the linear svm model for false negatives. Every single false negative could mean less displaced persons saved, so this model is less attractive of a choice than previous models.
+The model has 6,334 false positives and 5,069 false negatives. While the model performs better than the linear svm model in terms of having much less false positives, this accounts for a little more than 30% improvement compared to performing ~1509% worse than the linear svm model for false negatives. Every single false negative could mean less displaced persons saved, so this model is less attractive of a choice than previous models.
 
 ```{r rbf-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Radial Basis Function Support Vector Machine ROC Curve"}
 
@@ -1025,19 +1067,68 @@ logreg_conf_matrix <- conf_mat(logreg_results, estimate=.threshold_pred_class, t
 lda_conf_matrix <- conf_mat(lda_results, estimate=.threshold_pred_class, truth=BlueTarp)
 qda_conf_matrix <- conf_mat(qda_results, estimate=.threshold_pred_class, truth=BlueTarp)
 knn_conf_matrix <- conf_mat(knn_results, estimate=.threshold_pred_class, truth=BlueTarp)
-en_conf_matrix <- conf_mat(elastic_results, estimate=.pred_class, truth=BlueTarp)
-lsvm_conf_matrix <- conf_mat(linear_svm_results, estimate=.pred_class, truth=BlueTarp)
-psvm_conf_matrix <- conf_mat(poly_svm_results, estimate=.pred_class, truth=BlueTarp)
-rbfsvm_conf_matrix <- conf_mat(rbf_svm_results, estimate=.pred_class, truth=BlueTarp)
-rf_conf_matrix <- conf_mat(rf_results, estimate=.pred_class, truth=BlueTarp)
+en_conf_matrix <- conf_mat(elastic_results, estimate=.threshold_pred_class, truth=BlueTarp)
+lsvm_conf_matrix <- conf_mat(linear_svm_results, estimate=.threshold_pred_class, truth=BlueTarp)
+psvm_conf_matrix <- conf_mat(poly_svm_results, estimate=.threshold_pred_class, truth=BlueTarp)
+rbfsvm_conf_matrix <- conf_mat(rbf_svm_results, estimate=.threshold_pred_class, truth=BlueTarp)
+rf_conf_matrix <- conf_mat(rf_results, estimate=.threshold_pred_class, truth=BlueTarp)
 
 
 # knn_conf_matrix
 # qda_conf_matrix
 ```
 
+```{r show-confus}
+# paste("log reg")
+# logreg_conf_matrix  
+# 
+# paste("lda")
+# lda_conf_matrix
+# 
+# paste("qda")
+# qda_conf_matrix
+# 
+# paste('knn')
+# knn_conf_matrix
+# 
+# paste('en')
+# en_conf_matrix
+# 
+# paste("lsvm")
+# lsvm_conf_matrix
+# 
+# paste("psvm")
+# psvm_conf_matrix
+# 
+# paste("rbfsvm")
+# rbfsvm_conf_matrix
+# 
+# paste("random forest")
+# rf_conf_matrix
+```
 
-```{r test-performance-metrics}
+```{r test-performance-metric}
+
+# View results before and after threshold picking
+performance_table <-  bind_rows(performance_table, 
+                                performance_metrics(rf_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
+                                  bind_rows(roc_auc(rf_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(rf_threshold_performance)$.threshold %>% tail(n=1)) %>%
+                                  dplyr::select(c(Threshold, 
+                                                  .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="Random Forest")
+                                )
+
+performance_table <-  bind_rows(performance_table, 
+                                performance_metrics(elastic_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
+                                  bind_rows(roc_auc(elastic_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(en_threshold_performance)$.threshold) %>%
+                                  dplyr::select(c(Threshold, 
+                                                  .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="Penalized LR")
+                                )
 
 performance_table %>%
       knitr::kable(digits=4, caption='Test Performance Metrics')
