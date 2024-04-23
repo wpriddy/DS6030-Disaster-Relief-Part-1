@@ -673,7 +673,7 @@ autoplot(knn_tune_results) +
 
 ### Random Forest
 
-The Random Forest Classifier model performed very well on this data, and indeed performed the best out of all of the classifiers. The model was trained and tuned using 10-fold cross validation. The parameters that were tuned were `mtry`, `trees`, and `min_n`, which represent the number of predictors which will be used at each split, the number of trees in the forest, and the minimum number of datapoints required for splitting a node, respectively.
+The Random Forest Classifier model performed very well on this data, and indeed performed the best out of all of the classifiers. The model was trained and tuned using 10-fold cross validation. The parameters that were tuned were `mtry`, `trees`, and `min_n`, which represent the number of predictors which will be used at each split, the number of trees in the forest, and the minimum number of datapoints required for splitting a node, respectively. The optimal values for the aforementioned hyperparameters were `mtry=1`, `trees=355`, and `min_n = 6`, which gave a cross-validated accuracy of 0.9972.
 
 ```{r rf-model, message=FALSE, warning=FALSE}
 # Create RF Model
@@ -705,7 +705,8 @@ tune_results <- tune_grid(rf_wf,
                           metrics=performance_metrics)
 
 show_best(tune_results, metric='accuracy', n=1) %>% 
-    knitr::kable()
+    select(c(mtry, trees, min_n, .metric, mean))
+    knitr::kable(caption="Best RF Model")
 
 
 
@@ -740,10 +741,10 @@ performance_table <-  bind_rows(performance_table,
 rf_cv_viz <- visualize_training(tune_results, 
                                  "Random Forest Validation Results")
 
-tune_results %>% 
-    show_best(metric='accuracy') %>% 
-    select(-.config) %>% 
-    knitr::kable()
+# tune_results %>% 
+#     show_best(metric='accuracy') %>% 
+#     select(-.config) %>% 
+#     knitr::kable()
 
 test_predictions <- rf_model_tuned %>%
   predict(test_data) %>%
@@ -762,7 +763,7 @@ rf_cv_viz
 
 ```
 
-When analyzing the threshold performance, we found that there were many thresholds which performed equally well, so we chose the highest threshold so as to conform to our other models. At this threshold of 0.85, we found that the model had 1,695 false positives, and an ROC AUC score of 0.976.
+When analyzing the threshold performance, we found that there were many thresholds which performed equally well, so we chose the highest threshold so as to conform to our other models. At this threshold of 0.85, we found that the model had 1,695 false positives, and a testing ROC AUC score of 0.976. 
 
 ```{r rf-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Random Forest ROC Curve"}
 

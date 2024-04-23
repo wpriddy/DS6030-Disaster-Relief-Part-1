@@ -166,6 +166,8 @@ Metrics utilized:
   
   - precision: $\frac{TP}{TP+FP}$
   
+  
+When given the holdout dataset, the color columns were unlabeled, and thus, the correct combination of red, green, and blue columns had to be determined. This was done manually, using the given blue tarp color values. We found, by trying the various permutations of the columns, one combination consistently produced a blue color, while the other permutations were various, clearly non-blue colors. 
 
   
 
@@ -581,7 +583,7 @@ rf_wf <- workflow() %>%
 parameters <- extract_parameter_set_dials(rf_wf) %>% 
     update(
         mtry=mtry(c(1, 3)),
-        trees=trees(c(250, 500)),
+        trees=trees(c(400, 600)),
         min_n=min_n(c(2, 10))
     )
 
@@ -590,13 +592,14 @@ parameters <- extract_parameter_set_dials(rf_wf) %>%
 # Identify best model based on searching the parameter space
 tune_results <- tune_grid(rf_wf, 
                           resamples=resamples,
-                          grid=grid_random(parameters, size=300), 
+                          grid=grid_random(parameters, size=150), 
                           metrics=performance_metrics)
 
 show_best(tune_results, metric='accuracy', n=1) %>% 
-    knitr::kable()
+    select(c(mtry, trees, min_n, .metric, mean))
+    knitr::kable(caption="Best RF Model")
 
-autoplot(tune_results)
+# autoplot(tune_results)
 
 # Finalize workflow with best model and fit model
 rf_model_tuned <- rf_wf %>%
@@ -606,16 +609,32 @@ rf_model_tuned <- rf_wf %>%
 # Get preds with test data
 rf_results <- rf_model_tuned %>% augment(test_data)
 
+# Get Performance Thresholds
+rf_threshold_performance <- performance_func_1(rf_model_tuned) 
 
+# Change Pred Class metric based on threshold testing
+rf_results$.threshold_pred_class <- as.factor(ifelse(rf_results$.pred_Yes >= max_precision(rf_threshold_performance)$.threshold, "Yes", "No"))
+
+
+# View results before and after threshold picking
+performance_table <-  bind_rows(performance_table, 
+                                performance_metrics(rf_results, truth=BlueTarp, estimate=.threshold_pred_class) %>%
+                                  bind_rows(roc_auc(rf_results, truth=BlueTarp, .pred_Yes, event_level = "second")) %>%
+                                  mutate(Threshold = max_precision(rf_threshold_performance)$.threshold %>% tail(n=1)) %>%
+                                  dplyr::select(c(Threshold, 
+                                                  .metric, .estimate)) %>%
+                                      pivot_wider(names_from = .metric, values_from = .estimate, id_cols=Threshold) %>%
+                                      mutate(model="Random Forest")
+                                )
 
 # Visualize Penalized Log Fit
 rf_cv_viz <- visualize_training(tune_results, 
                                  "Random Forest Validation Results")
 
-tune_results %>% 
-    show_best(metric='accuracy') %>% 
-    select(-.config) %>% 
-    knitr::kable()
+
+
+# performance_table %>%
+#       knitr::kable(digits=4, caption='Test Performance Metrics')
 
 test_predictions <- rf_model_tuned %>%
   predict(test_data) %>%
@@ -626,6 +645,9 @@ test_metrics <- test_predictions %>%
 ```
 
 
+```{r}
+max_precision(rf_threshold_performance)
+```
 
 ```{r cv-training, fig.cap="Cross Validation Metrics"}
 # Visualize Cross validation Metrics
