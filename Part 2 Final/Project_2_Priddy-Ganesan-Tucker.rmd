@@ -38,8 +38,7 @@ registerDoParallel(cl)
 
   In the aftermath of a devastating earthquake that rattled Haiti, displaced people are living in makeshift shelters
 awaiting support from aid workers. The aid workers, mainly from the United States military, are trying to reach the dispersed
-camps.  With communication lines being down and the terrain being impassable, there are challenges in providing relief in a time-
-sensitive manner.
+camps.  With communication lines being down and the terrain being impassable, there are challenges in providing relief in a time-sensitive manner.
 
   It is known that the makeshift shelters are largely constructed with blue tarps, therefore the Rochester Institute of
 Technology deployed airplanes to collect high resolution geo-referenced imagery. This will help us identify where displaced persons are
@@ -160,7 +159,7 @@ cv_control <- control_resamples(save_pred=TRUE)
 
 Each model is being trained with 10-fold cross-validation to ensure the models are generalizing well and stable over the data set rather than performing well on a single subsection of the train/test split. 
 
-The tunable parameters in the five models were number of neighbors in KNN, and penalty and mixture in the Penalized Logistic Regression models. These hyperparameters were tuned using a random grid search and 10-fold cross validation. The grid boundaries were determined using a guess-and-check approach, utilizing the `autoplot` method to ensure that the optimal range of values was included in the boundaries. The optimal combination of hyperparameters was defined by the best metric scores. 
+The tunable parameters in the five models were number of neighbors in KNN, and penalty and mixture in the Penalized Logistic Regression models. For the Random Forest classifier, we tuned the number of features each tree would sample, the number of trees in the forest, and the minimum values for a split. Finally, for the linear SVM, we tuned the cost and margin hyperparameters; for the polynomial SVM, we tuned the cost, margin, degree, and scale factor hyperparameters; and for the RBF SVM, we tuned the cost, margin, and RBF sigma parameters. These hyperparameters were tuned using a random grid search and 10-fold cross validation. The grid boundaries were determined using a guess-and-check approach, utilizing the autoplot method to ensure that the optimal range of values was included in the boundaries. The optimal combination of hyperparameters was defined by the best metric scores.  
 
 The metrics we used are listed below, and are canonically used when measuring classification model performance. 
 
@@ -174,7 +173,6 @@ Libraries used:
   -  tidyverse: used for plotting, data manipulation, and chaining operationsx`
   -  probably: used for assessing threshold performance on the models
   -  discrim: used for the LDA/QDA models
-  -  patchwork: used for combining plots
   -  doParallel: used for setting up parallel processing of the code to speed up performance. 
   -  scatterplot3d: used to render 3d scatter plot of RGB classifications of Blue Tarps
 
@@ -267,7 +265,7 @@ max_precision <- function(performance_data){
 
 ### Logistic Regression Model
 
-The logistic model was fit across the 10-fold cross-validation. The model seems to be generalizing well between the different folds with minimal variation throughout the training performance metrics as seen in *Figure 4*. The average performance metrics tell us that the initial model has very high sensitivity with little variation across the folds. Specificity is much lower with more variation in the results indicating is it not as stable. This can be interpreted as the model is performing well at classifying the blue tarps. However it is classifying many objects that are not blue tarps creating many false positives as seen in the lower specificity. 
+The logistic model was fit across a 10-fold cross-validation. The model seems to be generalizing well between the different folds with minimal variation throughout the training performance metrics as seen in *Figure 4*. The average performance metrics tell us that the initial model has very high sensitivity with little variation across the folds. Specificity is much lower with more variation in the results indicating is it not as stable. This can be interpreted as the model is performing well at classifying the blue tarps. However it is classifying many objects that are not blue tarps creating many false positives as seen in the lower specificity. 
 
 
 ```{r log-model-training, message=FALSE, warning=FALSE, fig.cap="Logistic Regression CV Results", fig.width=5, fig.height=3}
@@ -642,7 +640,8 @@ performance_table <-  bind_rows(performance_table,
 ```
 
 ### K-Nearest Neighbors Model
-The KNN model performs better than the other models looking at the 10-fold cross validation. The sensitivity, accuracy, and precision are pretty similar to the other models, but the specificity performs better than LDA and QDA by a wide margin and performs better than logistic regression by 1%, which can make a pretty large impact in practice, since a higher specificity indicates more true positives, which means a higher chance of US military troops going to the correct location and saving valuable time when trying to find blue tarps with displaced persons.
+
+The KNN model performs somewhat worse than the other models looking at the 10-fold cross validation. The sensitivity, accuracy, and precision are pretty similar to the other models, but the specificity performs better than LDA and QDA by a wide margin and performs better than logistic regression by 1%, which can make a pretty large impact in practice, since a higher specificity indicates more true positives, which means a higher chance of US military troops going to the correct location and saving valuable time when trying to find blue tarps with displaced persons.
 
 ```{r knn-cv, fig.height=2, fig.width=5, fig.cap="KNN Cross Validation Results"}
 
@@ -673,7 +672,8 @@ autoplot(knn_tune_results) +
 
 ### Random Forest
 
-The Random Forest Classifier model performed very well on this data, and indeed performed the best out of all of the classifiers. The model was trained and tuned using 10-fold cross validation. The parameters that were tuned were `mtry`, `trees`, and `min_n`, which represent the number of predictors which will be used at each split, the number of trees in the forest, and the minimum number of datapoints required for splitting a node, respectively. The optimal values for the aforementioned hyperparameters were `mtry=1`, `trees=355`, and `min_n = 6`, which gave a cross-validated accuracy of 0.9972.
+The Random Forest Classifier model performed very well on this data, and indeed performed well among all the classifiers. The model was trained and tuned using 10-fold cross validation. The parameters that were tuned were `mtry`, `trees`, and `min_n`, which represent the number of predictors which will be used at each split, the number of trees in the forest, and the minimum number of datapoints required for splitting a node, respectively. The optimal values for the aforementioned hyperparameters were `mtry=1`, `trees=355`, and `min_n = 6`, which gave a cross-validated training accuracy of 0.9972.
+
 
 ```{r rf-model, message=FALSE, warning=FALSE}
 # Create RF Model
@@ -705,7 +705,7 @@ tune_results <- tune_grid(rf_wf,
                           metrics=performance_metrics)
 
 show_best(tune_results, metric='accuracy', n=1) %>% 
-    select(c(mtry, trees, min_n, .metric, mean))
+    select(c(mtry, trees, min_n, .metric, mean)) %>%
     knitr::kable(caption="Best RF Model")
 
 
@@ -763,7 +763,7 @@ rf_cv_viz
 
 ```
 
-When analyzing the threshold performance, we found that there were many thresholds which performed equally well, so we chose the highest threshold so as to conform to our other models. At this threshold of 0.85, we found that the model had 1,695 false positives, and a testing ROC AUC score of 0.976. 
+At this threshold of 0.85, we found that the model had 1,695 false positives and 7,880 false negatives, and a testing ROC AUC score of 0.976.
 
 ```{r rf-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Random Forest ROC Curve"}
 
@@ -846,15 +846,14 @@ performance_table <-  bind_rows(performance_table,
 
 ```
 
-The Linear Support Vector Machine model performs better than several of the previous models, such as LDA and QDA, but is worse than the best models, KNN and Random Forest.
-Similar to the other models, the cross-validation sensitivity, precision, and accuracy are very close to 100% in this model, but the specificity is much lower, at a rate of about 0.88. This rate is lower than the random forest and KNN models by a large amount, meaning that there would be more false positives and therefore a higher chance of the army going to an area without survivors, losing valuable time that could be used saving displaced persons.
+The Linear Support Vector Machine model performs better than all of the previous models. Similar to the other models, the cross-validation results are very strong, close to 100% on all metrics outside of specificity. The model also performs much better on the test set than the previous models, showing its ability to protect against overfitting better than the other models.
  
 ```{r lsvm-cv, fig.height=2, fig.width=5, fig.cap="Linear Support Vector Machine Cross Validation Results"}
  
 linear_svm_cv_viz
 ```
 
-The model has 8,287 false positives and 315 false negatives. This is a drastic improvement over the LDA and QDA results, but does not match up with the KNN and random forest models in terms of test accuracy. So, we do not plan on utilizing the linear SVM model when trying to find blue tarps for survivors in Haiti.
+The model has 8,287 false positives and 315 false negatives. This is a drastic improvement over the test results of the other models, specifically relating to the false negatives, which have a smaller count, meaning a higher percent impact with each less false negative. This means more correctly identified blue tarps and therefore more lives saved. Later, we will see that the Polynomial SVM performs even better than this model, meaning we will not end up using this model as our final choice
 
 ```{r lscvm-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Linear Support Vector Machine ROC Curve"}
 
@@ -864,7 +863,7 @@ get_ROC_plot(linear_svm_final_fit, train_data, test_data, "Linear SVM Model") +
 
 ```
 
-For the Linear SVM model, we tuned the cost and margin. Cost represents the cost of predicting a smaple within or on the wrong side of the margin while margin is the epsilon for the loss function. We decided to use Bayesian hyperparameter tuning for our model, with ten iterations.
+We tuned the cost and margin parameters to maximize roc_auc of the model using the default ranges for the parameters. We used Bayesian hyperparameter tuning for the linear SVM model, with ten iterations.
 
 ```{r lsvm-tune, fig.height= 3, fig.width=6, fig.cap="Tune Results"}
  
@@ -876,7 +875,7 @@ autoplot(linear_svm_tune_grid_results) + ggtitle('Default Linear Kernel Tuning')
 
 ### Polynomial Support Vector Machine
 
-The Polynomial SVM performs well relative to most of the other models, but is not strong enough to be our final model choice for identifying blue tarp locations. The model has very high accuracy and precision, matching all of the other models, and has one of the better values of specificity from cross-validation, at about 0.84. However, it performs worse than KNN and Random Forest.
+The Polynomial SVM performs well relative to all of the previous models in terms of the ROC-AUC curve based on the test data results. The model has very high accuracy and precision, matching all of the other models. While the CV results from this model aren’t the best out of all of the models from the perspective of specificity, the results from the test metrics are the best out of any model, demonstrating the importance of having a training and test set to watch for overfitting, which the Polynomial SVM does the best to nullify.
 
 ```{r poly-svm, warning=FALSE, message=FALSE}
 
@@ -950,7 +949,7 @@ poly_svm_cv_viz
 
 ```
 
-The model has 6,671 false positives and 195 false negatives. This compares well compared to most of the models, but does not perform as well as random forest. So, choosing this model would take us in the wrong direction in terms of saving the most displaced persons.
+The model has 6,671 false positives and 195 false negatives. This compares well to all of the other models, proving to be the best model so far, indicated by the ROC curve below. So, choosing this model would take us in the right direction in terms of saving the most displaced persons as fast as possible.
 
 ```{r polysvm-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Polynomial Support Vector Machine ROC Curve"}
 
@@ -960,7 +959,7 @@ get_ROC_plot(poly_svm_final_fit, train_data, test_data, "Polynomial SVM Model") 
 
 ```
 
-For the Polynomial SVM model, we tuned the cost, margin, degree, and scale factor. Degree determines which degree the polynomial should be, based on the one with the best roc_auc from our model. We decided to use Bayesian hyperparameter tuning for our model, with ten iterations.
+For the Polynomial SVM model, we tuned the cost, margin, degree, and scale factor. Degree determines which degree the polynomial should be, based on the one with the best roc_auc from our model. We decided to use Bayesian hyperparameter tuning for our model, with ten iterations. 
 
 ```{r polysvm-tune, fig.height= 3, fig.width=6, fig.cap="Tune Results"}
 
@@ -1036,7 +1035,7 @@ performance_table <-  bind_rows(performance_table,
                                 )
 ```
 
-The Radial Basis Function (RBF) Support Vector Machine model does not perform well compared to some of the previous models. The specificity, which is the metric that varies the most between the models, is below 0.85, worse than several of the other models we tested. The difference is only a few percent below, but this would have a very important real-world impact, with less displaced persons possibly being saved. the model also performs worse than the other SVM models, indicating the possibility that the data is linearly separable. However, the RBF SVM model performs well overall, with an ROC curve with very close to a 100% true positive rate, performing much better than random guessing. 
+The Radial Basis Function (RBF) Support Vector Machine model does not perform well compared to some of the previous models, especially the other SVM models. The RBF SVM model performs well overall in terms of CV metrics, but shows a much worse ROC curve than some of the other models, with a lower true positive rate on the test set. The difference is a few percent below than the other SVM models, which would have a very important real-world impact, with less displaced persons possibly being saved.
 
 ```{r rbf-cv, fig.height=2, fig.width=5, fig.cap="Radial Basis Function Support Vector Machine Cross Validation Results"}
 
@@ -1044,7 +1043,7 @@ rbf_svm_cv_viz
 
 ```
 
-The model has 6,334 false positives and 5,069 false negatives. While the model performs better than the linear svm model in terms of having much less false positives, this accounts for a little more than 30% improvement compared to performing ~1509% worse than the linear svm model for false negatives. Every single false negative could mean less displaced persons saved, so this model is less attractive of a choice than previous models.
+The model has 6,334 false positives and 5,069 false negatives. The number of false negatives is drastically higher than the other SVM models, leading to many incorrect classifications of blue tarps as non-blue tarps. This could cause many displaced persons to not be saved, leading us to not choose this as our final model.
 
 ```{r rbf-roc, message=FALSE, warning=FALSE, fig.height=2, fig.width=4, fig.cap="Radial Basis Function Support Vector Machine ROC Curve"}
 
@@ -1053,6 +1052,8 @@ get_ROC_plot(rbf_svm_final_fit, train_data, test_data, "RBF SVM Model") +
               guides(colour="none")
 
 ```
+
+For this model, we tuned the cost, margin, and the sigma. Sigma refers to how non-linear the model will be, affecting the shape of the decision boundary. We used default ranges for the parameters and tuned the parameters using Bayesian hyperparameter optimization, with ten iterations.
 
 ```{r rbf-tune, fig.height= 3, fig.width=6, fig.cap="Tune Results"}
 
@@ -1138,13 +1139,21 @@ performance_table %>%
 
 # Conclusion {-}  
 
-Based on our analyses, we found that the K-Nearest Neighbors Model performs the best out of the five models explored. Based on our performance metrics of specificity, sensitivity, accuracy, precision, and AUC, this model consistently scored either higher than, or similarly to, the other models. In particular, the KNN Model had the highest specificity, accuracy, and precision out of all the models we tried, with values of 0.8923, 0.9963, and 0.9966, respectively. This model incorrectly classified 5 non-tarps as tarps, and incorrectly classified 42 tarps as non-tarps. We found this to be the best combination of false-positives and true-negatives in order to efficiently allocate resources in a rescue situation. In particular, the 5 non-tarps which were classified as tarps was relatively low, which would allow rescue teams to avoid performing operations at non-tarp locations. 
+- Based on our analyses, we found that the Polynomial SVM Model performs the best out of the nine models explored. Based on our performance metrics of specificity, sensitivity, accuracy, precision, and AUC, this model consistently scored either higher than, or similarly to, the other models. In particular, the Polynomial SVM Model had the highest testing specificity, accuracy, and precision out of all the models we tried, with values of 0.9795, 0.9967, and 0.9999, respectively. This model incorrectly classified 6,671 non-tarps as tarps, and incorrectly classified 195 tarps as non-tarps. We found this to be the best combination of false-positives and true-negatives in order to efficiently allocate resources in a rescue situation. In particular, the 195 non-tarps which were classified as tarps was relatively low compared to the size of the holdout set, which would allow rescue teams to avoid performing operations at non-tarp locations.
 
-That being said, most of the models performed very well, as can be seen by the test performance metrics. There were no models which significantly outperformed, or underperformed, based on our performance metrics and qualitative analysis. We have high confidence in our results especially considering the amount of exploration of models which we undertook. Each model was 10-fold cross-validated, and any tunable parameter was tuned as well. Thus, we have high confidence that our results are an accurate depiction of model performance, and since all models performed relatively well, we have high confidence in our results.  
 
-Based on this confidence, we believe that our work would be effective in terms of helping saving human lives. In particular, our high threshold reduces the false-positive rate - the rate at which non-tarps are classified as tarps. By reducing this quantity, we can reduce the number of misinformed rescuers who may be sent to areas where there are no people to be rescued. This is great, but comes with the trade off in that the true-negative rate is higher. However, this can be remedied in later rescue attempts by lowering the threshold. This allows for an initial efficient use of rescue resources. Therefore, we believe that these well-performing models would be effective in saving human lives by efficiently pointing rescue resources towards those who need it.
+The numerous models tested throughout this analysis all yielded better results, albeit at varying degrees, than if we were to classify everything as a non-blue tarp based on the ROC curves. By maintaining a high threshold, we were able to be precise regarding our classification of blue tarps to minimize the false positives saving valuable time and resources. Robustly testing through cross validation and tuning of these nine models, we can be confident the best method is being applied to find refugees after this horrific natural disaster. If we were to explore a different strategy to identify the refugees, it could be very possible that a different model would be more optimal. While the Polynomial SVM was best for our needs now, other models may shine in a different light. 
 
-One additional action our team could take to improve model results is to use ensemble methods. Two types of ensemble methods are bagging and boosting, and these methods would possibly improve our results by combining multiple model predictions rather that what we are currently doing of looking at individual models. Doing this could reduce variance and improve accuracy and other performance metrics. To do this, we would use stacking, where a meta-model would be trained on the predictions of multiple base models that we felt performed the best, such as KNN and logistic regression, and combine the predictions of these models to make a final prediction. 
+
+- The rationale for the using the Polynomial SVM to detect blue tarps is not only that it performed the best based on our analysis, but also based on results found in further exploratory data analysis. In *Figure 3*, we see that the blue tarp dataset, in the 3D space of the red, green, and blue values, appears to be separable by some hyperplane. Thus, it makes sense that a support vector machine, especially one as flexible as a Polynomial SVM, might be able to separate those classes. Further, we found that the Polynomial SVM performed best on the holdout set when it came to our most important metrics, mentioned below. The most important metrics to our analysis were precision, specificity, and ROC AUC. In all of these metrics, the Polynomial SVM performed the best out of all of the models we made, with a specificity of 0.9833, a precision of 0.9999, and a ROC AUC of 0.9994. Thus, our recommendation is to use the Polynomial SVM for the detection of blue tarps.
+
+- The metrics calculated in the tables above are highly relevant to this application context, especially when considering that a real and tangible allocation of resources may be informed by, and human lives saved by, the metrics in this report. The metrics we used were accuracy, precision, sensitivity, specificity, and ROC AUC. The accuracy of the model is not entirely as important as some of the other metrics, as the class distribution is highly skewed towards non-blue-tarps. Precision is more important, as it measures the proportion of true positives to all of the positive classifications. High precision, therefore, is important to the allocation of resources.  Specificity is the ratio of true negatives to the true negatives and false positive, and so this matters quite a bit in the context of this problem, as we want to be sure that the resources are being allocated to specific sites - in other words, we would not want to send resources towards some areas which do not indeed have blue tarps. The ROC AUC metric is an important metric for our problem, as it allows us to glimpse the effectiveness of the model by looking at the ratio of specificity and sensitivity. Finally, the sensitivity is the ratio of the true positives to true positives and false negatives, which, in the context of our problem, is not so important as we do not want our model to be so sensitive as to divert real resources away towards false negatives.
+
+- That being said, most of the models performed very well, as can be seen by the test performance metrics. There were no models which significantly outperformed, or underperformed, based on our performance metrics and qualitative analysis. We have high confidence in our results especially considering the amount of exploration of models which we undertook. Each model was 10-fold cross-validated, and any tunable parameter was tuned as well. Thus, we have high confidence that our results are an accurate depiction of model performance, and since all models performed relatively well, we have high confidence in our results.  
+
+- Based on this confidence, we believe that our work would be effective in terms of helping saving human lives. In particular, our high threshold reduces the false-positive rate - the rate at which non-tarps are classified as tarps. By reducing this quantity, we can reduce the number of misinformed rescuers who may be sent to areas where there are no people to be rescued. This is great, but comes with the trade off in that the true-negative rate is higher. However, this can be remedied in later rescue attempts by lowering the threshold. This allows for an initial efficient use of rescue resources. Therefore, we believe that these well-performing models would be effective in saving human lives by efficiently pointing rescue resources towards those who need it.
+
+- To get to these conclusions, numerous models were run and tweaked. Graph sizes were changed and chunk-headers updated. Each run resulting in hours of knitting time. Some lessons learned when developing this project were; cache early and often, parallelism is your friend, test your code on small data before going big, and be systematic in your code design and updating. An ounce of preparation with system design beforehand is well worth the pound of trade off in time at the end.
 
 
 \newpage
